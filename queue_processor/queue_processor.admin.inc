@@ -162,6 +162,29 @@ function queue_processor_admin_settings() {
     '#description' => t('Enter a comma delimited list of values that will be converted to a true boolean value when exported to Salesforce.'),
     '#default_value' => variable_get('queue_processor_valid_booleans', 'true,yes,y,1'),
   );
+  
+  $form['queue_processor_batch_limits'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Log limits'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  
+  $form['queue_processor_batch_limits']['queue_processor_sf_batch_row_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Discard batch entries above the following row limit'),
+    '#default_value' => variable_get('queue_processor_sf_batch_row_limit', 10000),
+    '#options' => drupal_map_assoc(array(5000, 10000, 25000, 50000, 75000, 100000)),
+    '#description' => t('The maximum number of rows to keep in the batch log.')
+  );
+
+  $form['queue_processor_batch_limits']['queue_processor_sf_batch_error_row_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Discard batch error entries above the following row limit'),
+    '#default_value' => variable_get('queue_processor_sf_batch_error_row_limit', 10000),
+    '#options' => drupal_map_assoc(array(5000, 10000, 25000, 50000, 75000, 100000)),
+    '#description' => t('The maximum number of rows to keep in the batch error log.')
+  );
 
 	// Actions
   $form['submit'] = array(
@@ -211,30 +234,34 @@ function queue_processor_admin_settings_submit($form, &$form_state) {
 	uasort($ordered_types, "sort_weights");
   
   variable_set('queue_max_to_process', $form_state['values']['queue_max_to_process']);
-	variable_set('queue_processing_order', array_keys($ordered_types));
-	variable_set('queue_batch_size', $form_state['values']['queue_batch_size']);
-	variable_set('queue_retry_max', $form_state['values']['queue_retry_max']);
-	variable_set('queue_summary_email', $form_state['values']['queue_summary_email']);
-	variable_set('queue_heap_destination', $form_state['values']['queue_heap_destination']);
-	variable_set('queue_retry_delay', $form_state['values']['queue_retry_delay']);
-	variable_set('queue_processor_valid_booleans', $form_state['values']['queue_processor_valid_booleans']);
+  variable_set('queue_processing_order', array_keys($ordered_types));
+  variable_set('queue_batch_size', $form_state['values']['queue_batch_size']);
+  variable_set('queue_retry_max', $form_state['values']['queue_retry_max']);
+  variable_set('queue_summary_email', $form_state['values']['queue_summary_email']);
+  variable_set('queue_heap_destination', $form_state['values']['queue_heap_destination']);
+  variable_set('queue_retry_delay', $form_state['values']['queue_retry_delay']);
+  variable_set('queue_processor_valid_booleans', $form_state['values']['queue_processor_valid_booleans']);
+  variable_set('queue_processor_sf_batch_row_limit', $form_state['values']['queue_processor_sf_batch_row_limit']);
+  variable_set('queue_processor_sf_batch_error_row_limit', $form_state['values']['queue_processor_sf_batch_error_row_limit']);
   
-	drupal_set_message(t('Settings have been saved.'));
+  drupal_set_message(t('Settings have been saved.'));
 }
 
 /**
  * Resets queue processing settings to their default values
  */
 function queue_processor_admin_settings_reset($form, &$form_state) {
-	variable_set('queue_processing_order', array('user', 'donation', 'webform', 'node'));
-	variable_set('queue_batch_size', 200);
-	variable_set('queue_retry_max', 3);
-	variable_set('queue_summary_email', NULL);
-	variable_set('queue_heap_destination', 'queue');
-	variable_set('queue_retry_delay', 24);
-	variable_set('queue_processor_valid_booleans', 'true,yes,y,1');
+  variable_set('queue_processing_order', array('user', 'donation', 'webform', 'node'));
+  variable_set('queue_batch_size', 200);
+  variable_set('queue_retry_max', 3);
+  variable_set('queue_summary_email', NULL);
+  variable_set('queue_heap_destination', 'queue');
+  variable_set('queue_retry_delay', 24);
+  variable_set('queue_processor_valid_booleans', 'true,yes,y,1');  
+  variable_set('queue_processor_sf_batch_row_limit', 10000);
+  variable_set('queue_processor_sf_batch_error_row_limit', 10000);
 	
-	drupal_set_message(t('Settings have been reset.'));
+  drupal_set_message(t('Settings have been reset.'));
 }
 
 function sort_weights($a, $b) {
