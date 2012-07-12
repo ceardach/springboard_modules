@@ -301,7 +301,14 @@ function fundraiser_admin_settings() {
 	 '#title' => t('Credit card expiration email'),
 	 '#collapsible' => TRUE,
 	);
-	
+
+  $form['fundraiser_cc_expiration_message']['fundraiser_sustainers_send_email'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Send expiration email'),
+    '#description' => t('If this option is enabled then emails will be sent when a card is about to expire.'),
+    '#default_value' => variable_get('fundraiser_sustainers_send_email', TRUE),
+  );
+
 	$form['fundraiser_cc_expiration_message']['fundraiser_cc_exp_subject'] = array(
 	 '#type' => 'textfield',
 	 '#title' => t('Email subject'),
