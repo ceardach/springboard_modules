@@ -1,0 +1,179 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function quick_donate_install() {
+  drupal_install_schema('quick_donate');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function quick_donate_uninstall() {
+  drupal_uninstall_schema('quick_donate');
+  variable_del('quick_donate_donation_confirmations');
+  variable_del('quick_donate_sustainer_upgrade_confirmations');
+  variable_del('quick_donate_sustainer_conversion_confirmations');
+  variable_del('quick_donate_sustainer_upgrade_response');
+  variable_del('quick_donate_sustainer_conversion_response');
+  variable_del('quick_donate_registration_message');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function quick_donate_schema() {
+
+// TODO: verify payment gateway tokens don't exceed 255 characters in length.
+  $schema['quick_donate'] = array(
+    'description' => t(''),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('node id'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'quick_donate_enabled' => array(
+        'description' => t('quick donate enabled'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'display' => array(
+        'description' => t('where to display the quick donate registration form'),
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+  );
+  $schema['quick_donate_registration'] = array(
+    'description' => t('Stores user registration information for users subscribed to the quick donate feature.'),
+    'fields' => array(
+      'uid' => array(
+        'description' => t('User id.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'registration_complete' => array(
+        'description' => t('Registration flag'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'user_phone' => array(
+        'description' => t('user telephone number.'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('uid'),
+  );
+  // TODO: add table indexes.
+  $schema['quick_donate_payment_methods'] = array(
+    'description' => t('Stores user payment methods.'),
+    'fields' => array(
+      'pid' => array(
+        'description' => t('Payment method id'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => t('User id.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sid' => array(
+        'description' => t('Webform submission id.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'gateway_id' => array(
+        'description' => t('Payment gateway id.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'order_id' => array(
+        'description' => t('Ubercart order id.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'billing_first_name' => array(
+        'description' => t('CC First Name'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'billing_last_name' => array(
+        'description' => t('CC Last Name'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'billing_street1' => array(
+        'description' => t('Billing address line 1'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'billing_street2' => array(
+        'description' => t('Billing address line 2'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'billing_city' => array(
+        'description' => t('Billing city'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'billing_zone' => array(
+        'description' => 'The state/zone/province ID where the bill will be sent.',
+        'type' => 'int',
+        'size' => 'medium',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'billing_postal_code' => array(
+        'description' => t('CC First Name'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'billing_country' => array(
+        'description' => 'The country ID where the bill will be sent.',
+        'type' => 'int',
+        'size' => 'medium',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'ref_token' => array(
+        'description' => t('Reference ID'),
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'data' => array(
+        'description' => t('CC data'),
+        'type' => 'text',
+      ),
+    ),
+  );
+  return $schema;
+}

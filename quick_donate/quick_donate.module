@@ -1,0 +1,1140 @@
+<?php
+
+/**
+ * Implements hook_help().
+ */
+function quick_donate_help($section) {
+  switch ($section) {
+  case 'admin/help#quick_donate':
+    return t('Integrates Fundraiser donation forms with Mobile Commons.');
+  case 'admin/modules#description':
+    return t('Handles SMS-based donations via Mobile Commons. Requires services.module, fundraiser.module and webform.module');
+  }
+}
+
+/**
+ * Implements hook_perm().
+ */
+function quick_donate_perm() {
+  return array('administer quick donations', 'view quick donate payment methods', 'edit quick donate payment methods');
+}
+
+/**
+ * Implements hook_menu().
+ */
+function quick_donate_menu() {
+  $items['admin/settings/quick_donate'] = array(
+    'title' => 'Quick Donate',
+    'description' => 'Administer settings for Fundraiser quick donations',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quick_donate_admin'),
+    'access arguments' => array('administer quick donations'),
+    'file' => 'includes/quick_donate.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['quick_donate/donation'] = array(
+    'title' => 'Donation',
+    'page callback' => 'quick_donate_donation',
+    'access callback' => 'quick_donate_donation_access',
+    'file' => 'includes/quick_donate.callbacks.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['quick_donate/sustainer_upgrade'] = array(
+    'title' => 'Sustainer Upgrade',
+    'page callback' => 'quick_donate_sustainer_upgrade',
+    'access callback' => 'quick_donate_sustainer_upgrade_access',
+    'file' => 'includes/quick_donate.callbacks.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['quick_donate/sustainer_conversion'] = array(
+    'title' => 'Sustainer Conversion',
+    'page callback' => 'quick_donate_sustainer_conversion',
+    'access callback' => 'quick_donate_sustainer_conversion_access',
+    'file' => 'includes/quick_donate.callbacks.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['user/%user/payment_methods'] = array(
+    'title' => 'Payment methods',
+    'page callback' => 'quick_donate_payment_methods',
+    'page arguments' => array(1),
+    'access callback' => 'quick_donate_access_payment_methods',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'includes/quick_donate.forms.inc',
+  );
+  $items['user/%user/payment_methods/%quick_donate_payment_method/edit'] = array(
+    'title' => 'Edit payment method',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quick_donate_edit_payment_method', 1, 3),
+    'access callback'=> 'quick_donate_access_edit_payment_methods',
+    'access arguments' => array(1, 3),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/quick_donate.forms.inc',
+  );
+  return $items;
+}
+
+
+/**
+ * Payment method loader.
+ */
+function quick_donate_payment_method_load($pid) {
+  static $methods = array();
+  $gateways = array(
+    'gm_authorizenet' => 'authorizenet',
+    'gm_sage' => 'sage',
+  );
+  if (!isset($methods[$pid])) {
+    $method = db_fetch_array(db_query('
+      SELECT
+        pid,
+        uid,
+        sid,
+        gateway_id,
+        order_id,
+        billing_first_name,
+        billing_last_name,
+        billing_street1,
+        billing_street2,
+        billing_city,
+        billing_zone,
+        billing_postal_code,
+        billing_country,
+        ref_token,
+        data
+      FROM {quick_donate_payment_methods
+      WHERE
+        pid = %d
+    ', $pid));
+    $method['data'] = unserialize($method['data']);
+    $method['data']['cc_data'] = uc_credit_cache('save', $method['data']['cc_data'], TRUE);
+    // TODO: replace this with a lookup function that works with UC core gateways in addition to gateway manager gateways.
+    $gateway_type = db_result(db_query('SELECT type FROM {gateway_manager_gateways} WHERE id=%d', $method['gateway_id']));
+    $method['gateway_type'] = $gateways[$gateway_type];
+    module_invoke_all('quick_donate_payment_method_load', $method);
+    $methods[$pid] = $method;
+  }
+  return $methods[$pid];
+}
+
+/**
+ * Access callback for the donation action.
+ */
+function quick_donate_donation_access() {
+  // TODO: authentication or IP filtering goes here.
+  return TRUE;
+}
+
+/**
+ * Access callback for the sustainer upgrade action.
+ */
+function quick_donate_sustainer_upgrade_access() {
+  // TODO: authentication or ip filtering goes here.
+  return TRUE;
+}
+
+/**
+ * Access callback for the sustainer conversion action.
+ */
+function quick_donate_sustainer_conversion_access() {
+  // TODO: authentication or IP filtering goes here.
+  return TRUE;
+}
+
+/**
+ * Access callback for user profile payment methods tab.
+ */
+function quick_donate_access_payment_methods($account) {
+  $access = FALSE;
+  global $user;
+  if ($user->uid == 1) {
+    $access = TRUE;
+  }
+  elseif ($user->uid == $account->uid) {
+    $access = TRUE;
+  }
+  elseif (user_access('view quick donate payment methods')) {
+    $access = TRUE;
+  }
+  return $access;
+}
+
+
+function quick_donate_access_edit_payment_methods($account, $payment_method) {
+  global $user;
+  $access = FALSE;
+  if ($user->uid == 1) {
+    $access = TRUE;
+  }
+  elseif ($user->uid == $payment_method['uid']) {
+    $access = TRUE;
+  }
+  else {
+    $access = user_access('edit quick donate payment methods', $user);
+  }
+  return $access;
+}
+
+/**
+ * Implements hook_user
+ */
+function quick_donate_user($op, $edit, &$account) {
+  if ($op == 'load') {
+    $account->quick_donate_registered = (int) quick_donate_user_is_registered($account->uid);
+  }
+}
+
+/**
+ * Implements hook_menu_alter().
+ *
+ * Swap standard node callback for custom callback we control.
+ */
+function quick_donate_menu_alter(&$items) {
+  $items['node/%node']['page callback'] = 'quick_donate_node_pageview';
+}
+
+/**
+ * Conditionally render "donation" subset of the larger donation form. Should only trigger for
+ * users who have opted into Quick Donate.
+ */
+function quick_donate_node_pageview($node) {
+
+  // TODO: replace with donation form detection.
+  if ($node->type == 'donation_form') {
+    global $user;
+    $account = $user;
+    if (!isset($account->quick_donate_registered)) {
+      $account = user_load(array('uid' => $account->uid));
+    }
+    $settings = quick_donate_settings($node->nid);
+    if ($settings['enabled'] && $account->quick_donate_registered) {
+      
+      return drupal_get_form('quick_donate_donation_form', $node->nid);
+    }
+    else {
+      return node_page_view($node);
+    }
+  }
+
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Add the form elements to enable/disable quick donate registration on a donation form.
+ */
+function quick_donate_form_alter(&$form, $form_state, $form_id) {
+  // TODO: replace this with donation node detection
+  $donation_node_types = array('donation_form');
+  $node = $form["#node"];
+  $settings = quick_donate_settings($node->nid);
+  
+  // Node edit form
+  if (in_array($node->type, $donation_node_types) && $form_id == $node->type . '_node_form') {
+
+    $nid = $form['#node']->nid;
+    $form['quick_donate_settings'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Quick Donate settings'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['quick_donate_settings']['quick_donate_enabled'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable quick donate registration on this form'),
+      '#default_value' => (int) quick_donate_enabled($nid),
+      '#description' => t('When enabled users will be able to register to quick donate when submitting a donation  using this form.'),
+    );
+    $form['quick_donate_settings']['quick_donate_display'] = array(
+      '#type' => 'radios',
+      '#title' => t('Display the quick donation registration'),
+      '#options' => array(
+        'form' => t('On the donation form.'),
+        'confirmation' => t('On the confirmation page.'),
+      ),
+      '#default_value' => $settings['display'],
+    );
+  }
+  
+  
+  // donation form
+  if (strstr($form_id, 'webform_client_form') && $settings['display'] == 'form') {
+    global $user;
+    $account = $user;
+    if (!isset($account->quick_donate_registered)) {
+      $account = user_load(array('uid' => $user->uid));
+    }
+    
+    $settings = quick_donate_settings($form["#node"]->nid);
+    if ($settings['enabled'] && $settings['display'] == 'form' && !$account->quick_donate_registered) {
+      $form['#submit'] = array_unshift($form['#submit'], array('quick_donate_webform_submit'));
+      $form['#validate'][] = 'quick_donate_webform_validate';
+    }
+  }
+  
+  // If you are looking for the code that reduces donation forms to ask amount components and a submit button
+  // it isn't here. Go take a look at hook_menu_alter() and quick_donate_donation_form()
+}
+
+function quick_donate_webform_validate(&$form, $form_state) {
+  // TODO: find out how phone numbers will be formatted by the SMS service and validate accordingly.
+  // Also, see @http://stackoverflow.com/questions/3090862/how-to-validate-phone-number-using-php for a brief note on
+  // why validation is going to be a wormhole.
+}
+
+/**
+ * Form submission callback for donation forms. Handles 1st pass user registration when Quick Donate registration is
+ * enabled and display is set to show registration components on the donation form.
+ *  Triggered when quick donate is enabled on a form and the user account
+ * associated with the form submission is not opted into Quick Donate.
+ */
+function quick_donate_webform_submit($form, $form_state) {
+
+  $settings = quick_donate_settings($form['#node']->nid);
+
+  if (is_array($settings) && $settings['enabled'] == TRUE && $settings['display'] == 'form') {
+    $values = $form_state['values']['submitted_tree']['quick_donate'];
+    $registration = $values['quick_donate_register'][0];
+    $phone = isset($values['quick_donate_phone']) ? $values['quick_donate_phone'] : '';
+    if ($registration) {
+      global $user;
+      if ($user->uid != 0) {
+        $uid = $user->uid;
+      }
+      else {
+        $uid = db_result(db_query('SELECT uid FROM {webform_submissions} WHERE sid=%d', $form_state['values']['details']['sid']));
+      }
+      // first pass registration. User record is added to {quick_donate_registration}. 2nd pass (on hook_fundraiser_order_success())
+      // adds payment method to {quick_donate_payment_method}
+      quick_donate_register_user($uid, 0, $phone);
+    }
+  }
+}
+
+/**
+ * Render donation form ask amounts and a submit button.
+ */
+function quick_donate_donation_form($edit, $nid) {
+  
+  module_load_include('module', 'webform');
+  $webform_node = node_load(array('nid' => $nid));
+  global $user;
+  $account = $user;
+  if (!isset($account->quick_donate_registered)) {
+    $account = user_load(array('uid' => $account->uid));
+  }
+ 
+  $payment_methods = quick_donate_load_payment_methods($account->uid);
+ 
+  // track down ask component & parent fieldset.
+  foreach ($webform_node->webform['components'] as $cid => $component) {
+    if ($component['form_key'] == 'amount') {
+      $ask_component = $component;
+    }
+    elseif ($component['form_key'] == 'other_amount') {
+      $other_amount = $component;
+    }
+  }
+  $components[$ask_component['cid']] = $ask_component;
+  if (isset($other_amount)) {
+    $components[$other_amount['cid']] = $other_amount;
+  }
+  $fieldset = array();
+  $components[$ask_component['pid']] = $webform_node->webform['components'][$ask_component['pid']];
+  $form['submitted'] = array();
+  $derp = 1;
+  
+  // render ask amount component and parent fieldset (if available)
+  _webform_components_tree_build($components, $components, 0, $derp);
+  
+  // if ask amount component has a parent fieldset, render fieldset and set parent form element to the rendered fieldset.
+  if (isset($ask_component['pid'])) {
+    _webform_client_form_add_component($node, $components[$ask_component['pid']], $component_value, $form['submitted'], $form, $form_state, $submission, 'form', 0, FALSE);
+    $target =& $form['submitted'][$components[$ask_component['pid']]['form_key']];
+  }
+  else {
+    $target =& $form['submitted'];
+  }
+  _webform_client_form_add_component($node, $components[$ask_component['cid']], $component_value, $target, $form, $form_state, $submission, 'form', 0, FALSE);
+  if (isset($other_amount)) {
+    _webform_client_form_add_component($node, $components[$other_amount['cid']], $component_value, $target, $form, $form_state, $submission, 'form', 0, FALSE);
+  }
+
+  if (count($payment_methods) > 1 || variable_get('quick_donate_debug_mode', 0)) {
+    $uid = $account->uid;
+    // TODO: fiddle &destination so once user is done viewing/editing payment methods they are returned to the donation form.
+    $profile_link = l(t('Manage your payment methods'), "user/$uid/payment_methods");
+    foreach($payment_methods as $method) {
+      $options[$method['pid']] = $method['data']['cc_data']['cc_type'] . ' - ***********' . $method['data']['cc_txns']['references'][$method['ref_token']]['card'];
+    }
+
+    $form['payment_method'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Payment methods'),
+    );
+    $form['payment_method']['method_select'] = array(
+      '#type' => 'select',
+      '#title' => t('Select a payment method'),
+      '#options' => $options,
+      '#default_value' => $payment_methods[0]['pid'],
+      '#description' => t('Select a payment method to use for this donation. !link', array('!link' => $profile_link)),
+    );
+  }
+  else {
+    $form['method_select'] = array(
+      '#type' => 'value',
+      '#value' => $payment_methods[0]['pid'],
+    );
+  }
+  $form['webform_nid'] = array(
+    '#type' => 'value',
+    '#value' => $nid,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Donate'),
+  );
+  $form['#validate'][] = 'quick_donate_validate_donation';
+  $form['#submit'][] = 'quick_donate_process_donation';
+  return $form;
+}
+
+function quick_donate_validate_donation(&$form, $form_state) {
+  // TODO: replace meme verbiage with credible error message.
+  $ask_amount = $form_state['values']['amount'];
+  $other_amount = $form_state['values']['other_amount'];
+
+  if (!$ask_amount && !$other_amount) {
+    form_set_error('ask_amount', t('Y U NO SELECT ASK AMOUNT?'));
+  }
+  elseif ($ask_amount == 'other' && (!is_numeric($other_amount) || !$other_amount)) {
+    form_set_error('other_amount', t('Y U NO ENTER OTHER AMOUNT?'));
+  }
+}
+
+/**
+ * Process a donation form submission via drupal_execute().
+ *
+ * This is the heart of the donation process. This function builds a full donation form submission from a combination of submitted
+ * ask amounts, user profile settings, and the user's payment method details.
+ */
+function quick_donate_process_donation($form, $form_state) {
+    global $user;
+    $account = $user;
+    if (!isset($account->quick_donate_registered)) {
+      $account = user_load(array('uid' => $account->uid));
+    }
+
+    $method = quick_donate_payment_method_load($form_state['values']['method_select']);
+
+    $nid = $form_state['values']['webform_nid'];
+    $node = node_load(array('nid' => $nid));
+    $ask_amount = is_numeric($form_state['values']['amount']) ? $form_state['values']['amount'] : $form_state['values']['other_amount'];
+
+    $submission = array(
+      'webform_nid' => $nid,
+      'address' => $method['billing_street1'],
+      'address_line_2' => $method['billing_street2'],
+      'city' => $method['billing_city'],
+      'country' => $method['billing_country'],
+      'state' => $method['billing_zone'],
+      'zip' => $method['billing_postal_code'],
+      'card_number' => '***********' . $method['data']['cc_txns']['references'][$method['ref_token']]['card'], // TODO: replace this with function
+      'card_expiration_month' => $method['data']['cc_data']['cc_exp_month'],
+      'card_expiration_year' => $method['data']['cc_data']['cc_exp_year'],
+      'card_cvv' => $method['data']['cc_data']['cc_cvv'],
+      'recurs_monthly' => $form_state['values']['recurs_monthly'],
+      'amount' => $form_state['values']['amount'],
+      'other_amount' => $form_state['values']['other_amount'],
+      'first_name' => $method['billing_first_name'],
+      'last_name' => $method['billing_last_name'],
+      'email' => $account->mail,
+    );
+
+    // Start with some defaults.
+    $new_state = array(
+      'quick_donate_submission' => TRUE,
+      'fundraiser_reference_txn' => TRUE,
+      'fundraiser_reference_txn_id' => $method['ref_token'],
+      'storage' => array(
+        'page_num' => 1,
+        'page_count' => 0,
+      ),
+      'clicked_button' => array(
+        '#parents' => array(),
+      ),
+      'submitted' => 1,
+      'values' => array(
+        'op' => !empty($node->webform['submit_text']) ? $node->webform['submit_text'] : 'Submit',
+        'submit' => 'Submit',
+        'form_id' => 'webform_client_form_' . $node->nid,
+        'process_input' => 1,
+      ),
+    );
+
+    $fields = _quick_donate_load_webform_fields($nid);
+
+    // Build $form_state based on available webform components.
+    // Note $save is a temporary variable used to proxy portions of $form_state during the build process.
+    foreach ($fields as $field) {
+      
+      if ($field->parent_key == NULL) {
+          $save = &$new_state['values']['submitted'];
+      }
+      else {
+        $save = &$new_state['values']['submitted'][$field->parent_key];
+      }
+
+      switch ($field->type) {
+        case 'fieldset';
+          $new_state['values']['submitted'][$field->form_key] = array();
+          break;
+        case 'hidden':
+          $save[$field->form_key] = $submission[$field->form_key];
+          $save[$field->cid] = $submission[$field->form_key];
+          //$submission['data'][$field->cid]['value'] = array($submission[$field->form_key]);
+          break;
+        case 'email':
+        case 'textfield':
+        case 'textarea':
+          $save[$field->form_key] = $submission[$field->form_key];
+          break;
+        case 'select':
+
+          if ($field->form_key === 'recurs_monthly' && isset($form_state['values']['recurs_monthly'])) {
+
+           if ($form_state['values']['recurs_monthly'] == 'recurs') {
+              $save['recurs_monthly'] = 'recurs';
+            }
+            break;
+          }
+          $extra = unserialize($field->extra);
+          if (!strcmp($extra['multiple'],'Y')) {
+            $extra['multiple'] = 1;
+          }
+          if (!isset($extra['multiple']) || $extra['multiple'] == 0) {
+            // Fundraiser's form_alter nerfs both of these fields. Hoop jumping is required to get past this.
+            if ($field->form_key === 'card_expiration_month' || $field->form_key === 'card_expiration_year') {
+              $save['expiration_date'][$field->form_key] = $submission[$field->form_key];
+            }
+            $save[$field->form_key] = $submission[$field->form_key];
+          }
+          else {
+    
+            $save[$field->form_key] = array();
+            if (strpos($submission[$field->form_key], ',')) {
+              $submission[$field->form_key] = explode(',', trim($submission[$field->form_key]));
+            }
+            else {
+              $submission[$field->form_key] = array(trim($submission[$field->form_key]));
+            }
+            if (preg_match("/\n/", $extra['items'])) {
+              $extra['items'] = explode("\n", $field->extra['items']);
+            }
+            else {
+              $extra['items'] = array($extra['items']);
+            }
+
+            foreach ($extra['items'] as $item) {
+              $item = preg_replace('/\|.*$/', '', $item);
+
+              if (in_array($item, $submission[$field->form_key])) {
+                $save[$field->form_key][$item] = $item;
+              }
+            }
+          
+            foreach ($submission[$field->form_key] as $item) {
+              $item = trim($item);
+              if (is_numeric($item)) {
+                $item = (int) $item;
+              }
+              $save[$field->form_key][$item] = $item;
+            }
+          }
+          break;
+        case 'date':
+          $date = explode('/', $submission[$field->form_key]);
+          $save[$field->form_key] = array(
+            'month' => $date[0],
+            'day' => $date[1],
+            'year' => $date[2],
+          );
+          break;
+      }
+    }
+
+
+    $new_state['clicked_button']['#post']['submitted'] = $form_state['values']['submitted'];
+    $submission = (object) $submission;
+
+    drupal_execute('webform_client_form_' . $submission->webform_nid, $new_state, $node, $submission, FALSE, FALSE);
+
+}
+
+function quick_donate_fundraiser_validate_webform_submission($form_state, $validate) {
+
+  if (isset($form_state['quick_donate_submission']) && $form_state['quick_donate_submission']) {
+    $validate = FALSE;
+  }
+  return $validate;
+}
+
+/**
+ * Implements hook_fundraiser_order_success().
+ *
+ * Add reference token to quick donate registration on successful order.
+ */
+function quick_donate_fundraiser_order_success($order) {
+  $ref_token = NULL;
+  $order = uc_order_load($order->order_id);
+  $ref_token = _quick_donate_get_token_from_order($order);
+
+  $webform_info = _quick_donate_fundraiser_order_data($order->order_id);
+  $registration = quick_donate_user_is_registered($order->uid, 'FALSE');
+  $payment_methods = quick_donate_load_payment_methods($order->uid);
+
+  if ($registration && !$payment_methods && $ref_token) {
+    quick_donate_save_payment_method($order->uid, $order->data['gateway'], $ref_token, $order->order_id, $webform_info['sid']);
+    drupal_set_message('TODO:fix redirect.');
+  }
+  
+}
+
+/**
+ *
+ */
+function _quick_donate_get_token_from_order($order) {
+  $ref_token = FALSE;
+  if (isset($order->data['cc_txns']['references'])) {
+    $references = $order->data['cc_txns']['references'];
+    $ref_token = key($references);
+  }
+  return $ref_token;
+}
+
+
+/**
+ * Implements hook_fundraiser_order_failure().
+ *
+ * Remove partial opt-in record if an a donation including quick donate registration fails.
+ */
+function quick_donate_fundraiser_order_failure($order_id) {
+  module_load_include('module', 'uc');
+  $order = uc_order_load($order_id);
+}
+
+
+// TODO: refactor user registration code with an eye towards adding multiple payment methods.
+/**
+ * Save user opt-in.
+ *
+ * @param uid
+ * user id
+ *
+ * @param phone
+ * User phone number
+ *
+ * @param reference token
+ * Payment gateway reference token
+ */
+function quick_donate_register_user($uid, $registration_complete, $phone = NULL) {
+
+  quick_donate_delete_registration($uid);
+  db_query("INSERT INTO {quick_donate_registration} (uid, registration_complete, user_phone) VALUES (%d, %d, '%s')", $uid, $registration_complete, $phone);
+
+}
+
+function quick_donate_user_is_registered($uid, $cache = TRUE) {
+  static $registered = array();
+  
+  if (!$cache || !isset($registered[$uid])) {
+    $result = db_result(db_query('SELECT uid FROM {quick_donate_registration} WHERE uid = %d', $uid));
+    $registered[$uid] =  $result ? TRUE : FALSE;
+  }
+  return $registered[$uid];
+}
+
+// TODO: this should be called when a user edits their opt-in preferences in their user account.
+/**
+ * Delete user opt-in record.
+ */
+function quick_donate_delete_registration($uid) {
+  db_query('DELETE FROM {quick_donate_registration} WHERE uid=%d AND registration_complete = 0', $uid);
+}
+
+/**
+ * Pull data from {fundraiser_webform_order}
+ *
+ * @param $param
+ * Numeric ubercart order id OR an array of column => value pairs.
+ *
+ * Example: $fundraiser_data = _quick_donate_fundraiser_order_data($order_id);
+ *
+ * Example 2: $fundraiser_data = _quick_donate_fundraiser_order_data(array('sid' => $webform_submission['sid']));
+ */
+function _quick_donate_fundraiser_order_data($param) {
+
+  if (is_array($param)) {
+    foreach ($param as $key => $value) {
+      $condition[] = db_escape_table($key) . " = '%s'";
+      $arguments[] = $value;
+    }
+    $condition = implode(' AND ', $condition);
+  }
+  elseif (is_numeric($param)) {
+    $condition = 'order_id = %d';
+    $arguments[] = $param;
+  }
+
+  $webform = db_fetch_array(db_query("SELECT order_id, webform_nid, sid, recurring_status FROM {fundraiser_webform_order} WHERE " . $condition, $param));
+  return $webform;
+}
+
+
+function quick_donate_save_payment_method($uid, $gateway_id, $ref_token, $order_id, $sid, $data) {
+  $order = uc_order_load($order_id);
+
+  db_query("
+     INSERT INTO {quick_donate_payment_methods} (
+       uid,
+       gateway_id,
+       ref_token,
+       order_id,
+       sid,
+       billing_first_name,
+       billing_last_name,
+       billing_street1,
+       billing_street2,
+       billing_city,
+       billing_zone,
+       billing_postal_code,
+       billing_country,
+       data
+     )
+     VALUES
+       (%d, %d, '%s', %d, %d, '%s', '%s', '%s', '%s', '%s', %d, '%s', %d, '')
+   ",
+    $uid,
+    $gateway_id,
+    $ref_token,
+    $order_id,
+    $sid,
+    $order->billing_first_name,
+    $order->billing_last_name,
+    $order->billing_street1,
+    $order->billing_street2,
+    $order->billing_city,
+    $order->billing_zone,
+    $order->billing_postal_code,
+    $order->billing_country
+    );
+  
+  // copy cc data from uc_orders, sidesteps around issues with serialize()
+  db_query('
+    UPDATE {quick_donate_payment_methods}
+    SET data = (
+       SELECT data
+       FROM {uc_orders}
+       WHERE order_id = %d
+    )
+    WHERE order_id = %d', $order_id, $order_id);
+   
+  db_query('UPDATE {quick_donate_registration} SET registration_complete = 1 WHERE uid = %d', $uid);
+}
+
+function quick_donate_load_payment_methods($uid) {
+  static $methods = array();
+ 
+  if (!isset($methods[$uid])) {
+    $results = db_query("
+      SELECT
+        pid,
+        uid,
+        gateway_id,
+        ref_token,
+        order_id,
+        sid,
+        billing_first_name,
+        billing_last_name,
+        billing_street1,
+        billing_street2,
+        billing_city,
+        billing_zone,
+        billing_postal_code,
+        billing_country,
+        data
+      FROM {quick_donate_payment_methods}
+      WHERE
+        uid = %d
+      ", $uid);
+
+    if ($results) {
+      while ($method = db_fetch_array($results)) {
+        $data = $method['data'] = unserialize($method['data']);
+        // unpack encrypted cc data.
+        $method['data']['cc_data'] = uc_credit_cache('save', $method['data']['cc_data'], TRUE);
+        $methods[$uid][] = $method;
+      }
+    }
+    else {
+      $methods[$uid] = FALSE;
+    }
+  }
+  return $methods[$uid];
+}
+
+/**
+ * Implements hook_fundraiser_create_webform_components().
+ */
+function quick_donate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+
+  // TODO: replace this check with a call to a function that provides an array of fundraiser node types.
+  $node_types = array('donation_form');
+
+  if (in_array($node->type, $node_types)) {
+
+    switch ($op) {
+      case 'insert':
+        quick_donate_save_settings($node->nid, $node->quick_donate_enabled, $node->quick_donate_display);
+        if ($node->quick_donate_enabled) {
+          _quick_donate_create_components($node->nid);
+        }
+        if ($node->quick_donate_enabled && $node->quick_donate_display == 'confirmation') {
+          _quick_donate_hide_components($node->nid);
+        }
+        break;
+      case 'update':
+        $settings = quick_donate_settings($node->nid);
+        
+        // if quick donate was enabled and has been turned off, delete components
+        if (quick_donate_enabled($node->nid) && !$node->quick_donate_enabled) {
+          _quick_donate_delete_components($node->nid);
+        }
+        // if quick donate was disabled and has been turned on add components.
+        elseif (!quick_donate_enabled($node->nid) && $node->quick_donate_enabled) {
+          _quick_donate_create_components($node->nid);
+          
+          // hide the components if display is set to confirmation.
+          if ($node->quick_donate_display == 'confirmation') {
+            _quick_donate_hide_components($node->nid);
+          }
+        }
+        // if display was changed from form to confirmation, hide components.
+        if (isset($settings['display']) && $settings['display'] == 'form' && $node->quick_donate_display == 'confirmation') {
+            _quick_donate_hide_components($node->nid);
+        }
+        // if display was changed from confirmation to form, unhide components.
+        if (quick_donate_enabled($node->nid) && isset($settings['display']) && $settings['display'] == 'confirmation') {
+          if ($node->quick_donate_display == 'form') {
+            //_quick_donate_create_components($node->nid);
+            _quick_donate_show_components($node->nid);
+          }
+        }
+  
+        quick_donate_save_settings($node->nid, $node->quick_donate_enabled, $node->quick_donate_display);
+        break;
+        
+        // update entry in {quick_donate}
+      case 'delete':
+        // garbage collection on {quick_donate} table
+        quick_donate_delete_settings($node->nid);
+        break;
+    }
+  }
+}
+
+/**
+ * save settings.
+ */
+function quick_donate_save_settings($nid, $quick_donate_enabled, $display) {
+  db_query('DELETE FROM {quick_donate} WHERE nid = %d', $nid);
+  db_query("INSERT INTO {quick_donate} (nid, quick_donate_enabled, display) VALUES (%d, %d, '%s')", $nid, (int) $quick_donate_enabled, $display);
+}
+
+function quick_donate_delete_settings($nid) {
+  db_query('DELETE FROM {quick_donate} WHERE nid = %d', $nid);
+}
+
+
+function quick_donate_settings($nid) {
+  static $settings;
+  if (!isset($settings[$nid])) {
+    $results = db_query('SELECT nid, quick_donate_enabled AS enabled, display FROM {quick_donate} WHERE nid = %d', $nid);
+    $settings[$nid] = $results ? db_fetch_array($results) : FALSE;
+  }
+  return $settings[$nid];
+}
+
+function quick_donate_enabled($nid) {
+  static $settings = array();
+  if (!isset($settings[$nid])) {
+    $enabled = db_result(db_query('SELECT quick_donate_enabled FROM {quick_donate} WHERE nid = %d', $nid));
+    $settings[$nid] = $enabled ? TRUE : FALSE;
+  }
+  return $settings[$nid];
+}
+
+/**
+ * Implementation of hook_token_list().
+ */
+function quick_donate_token_list($type = 'all') {
+  if ($type == 'quick_donate' || $type == 'all') {
+    $tokens['quick donate']['donation-amount'] = t('The amount donated');
+    $tokens['quick donate']['sustainer-amount'] = t('The sustaining donation amount.');
+    $tokens['quick donate']['sustainer-date'] = t('Date of the next sustainer payment charge.');
+  }
+  return $tokens;
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function quick_donate_token_values($type, $object = NULL) {
+  $values = array();
+  switch ($type) {
+    case 'quick donate':
+      $values['donation-amount'] = $object->donation_amount;
+      $values['sustainer-amount'] = $object->sustainer_amount;
+      $values['sustainer-date'] = $object->sustainer_date;
+      break;
+  }
+  return $values;
+}
+
+/**
+ * Implements hook_preprocess_hook().
+ *
+ * Add the registration form to the $confirmation_message_suffix template variable.
+ */
+function quick_donate_preprocess_fundraiser_confirmation(&$vars) {
+  module_load_include('inc', 'quick_donate', 'includes/quick_donate.forms');
+  $nid = $vars['node']->nid;
+  $sid = $vars['sid'];
+  $settings = quick_donate_settings($nid);
+  if ($settings['enabled'] && $settings['display'] == 'confirmation') {
+    $vars['confirmation_message_suffix'] = drupal_get_form('quick_donate_register', $nid, $sid);
+  }
+}
+
+
+
+/**
+ * create quick donate registration webform components.
+ */
+function _quick_donate_create_components($nid, $form_key = NULL) {
+  $fieldset = array(
+    'nid' => $nid,
+    'pid' => 0,
+    'form_key' => 'quick_donate',
+    'name' => 'Quick Donate',
+    'type' => 'fieldset',
+    'extra' => array(
+      'description' => 'Sign up for the quick donate service.',
+    ),
+    'mandatory' => 0,
+    'weight' => 0,
+    'email' => 0,
+  );
+  // we need the fid of this fieldset so we can set the pid for the other components
+  // thus we need to webform_component_insert() instead of letting fundraiser deal with it.
+  $pid = webform_component_insert($fieldset);
+
+  // registration checkbox
+  $registration = array(
+    'nid' => $nid,
+    'pid' => $pid,
+    'form_key' => 'quick_donate_register',
+    'name' => 'Register',
+    'type' => 'select',
+    'extra' => array(
+      'description' => 'Sign up for Quick Donate.',
+      'items' => '1|Yes',
+      'multiple' => 'Y',
+    ),
+    'mandatory' => 0,
+    'weight' => 0,
+    'email' => 0,
+  );
+
+  
+  $phone = array(
+    'nid' => $nid,
+    'pid' => $pid,
+    'form_key' => 'quick_donate_phone',
+    'name' => 'Phone Number',
+    'type' => 'textfield',
+     'extra' => array(
+      'description' => '',
+      'width' => 20,
+    ),
+    'mandatory' => 0,
+    'weight' => 0,
+    'email' => 0,
+  );
+  
+  if ($form_key) {
+    switch ($form_key) {
+      case 'quick_donate':
+        $fid = webform_component_insert($fieldset);
+        break;
+      case 'quick_donate_register':
+        $fid = webform_component_insert($registeration);
+        break;
+      case 'quick_donate_phone':
+        $fid = webform_component_insert($phone);
+    }
+    
+    return $fid;
+  }
+  webform_component_insert($registration);
+  webform_component_insert($phone);
+  return TRUE;
+}
+
+
+function _quick_donate_show_components($nid) {
+  $pid = _quick_donate_create_components($nid, 'quick_donate');
+  $registration_extra = serialize(array(
+    'description' => 'Sign up for Quick Donate.',
+    'items' => '1|Yes',
+    'multiple' => 'Y',
+  ));
+  $phone_extra = serialize(array(
+    'description' => '',
+    'width' => 20,
+  ));
+
+  _quick_donate_update_component($nid, 'quick_donate_register', $pid, 'select', $registration_extra, 0);
+  _quick_donate_update_component($nid, 'quick_donate_phone', $pid, 'textfield', $phone_extra, 0);
+}
+
+function _quick_donate_hide_components($nid) {
+
+  $hidden_extra = serialize(array(
+    'description' => '',
+    'private' => 0,
+    'hidden_type' => 'value',
+    'conditional_component' => '',
+    'conditional_operator' => '=',
+    'conditional_values' => '',
+  ));
+  db_query('
+    DELETE FROM {webform_component}
+    WHERE nid = %d AND form_key = "quick_donate"
+  ', $nid);
+  
+  _quick_donate_update_component($nid, 'quick_donate_register', 0, 'hidden', $hidden_extra, 0);
+  _quick_donate_update_component($nid, 'quick_donate_phone', 0, 'hidden', $hidden_extra, 0);
+   
+}
+
+function _quick_donate_delete_components($nid) {
+  db_query('DELETE FROM {webform_component} WHERE nid=%s AND form_key IN ("quick_donate","quick_donate_register","quick_donate_phone")', $nid);
+  drupal_set_message('Quick Donate components have been removed.');
+}
+
+/**
+ * Update a component definition in {webform_component}
+ * Used elsewhere to toggle quick donation webform components between types.
+ *
+ * @param $nid
+ * Webform node id
+ *
+ * @param $form_key
+ * Webform component form key
+ *
+ * @param $pid
+ * Component ID of parent fieldset
+ *
+ * @param $type
+ * Webform component type
+ *
+ * @param $extra
+ * Webform component extra settings.
+ *
+ * @param $mandatory
+ * Component is mandatory.
+ */
+function _quick_donate_update_component($nid, $form_key, $pid, $type, $extra, $mandatory) {
+  db_query("
+    UPDATE {webform_component}
+    SET
+      pid = %d, type = '%s', extra = '%s', mandatory = %d
+    WHERE
+      nid = %d AND form_key = '%s'
+  ", $pid, $type, $extra, $mandatory, $nid, $form_key);
+}
+
+/**
+ * Fetch an array of webform components.
+ *
+ * @param $nid
+ * Webform node id
+ *
+ * @return array
+ * returns an array of webform component objects.
+ */
+function _quick_donate_load_webform_fields($nid) {
+  $fields = array();
+  $results = db_query('
+    SELECT
+      wc.cid,
+      wc.form_key,
+      wc.type,
+      wc.extra,
+      wc2.form_key as parent_key
+    FROM {webform_component} wc
+    LEFT JOIN {webform_component} wc2
+      ON wc2.cid = wc.pid
+      AND wc2.nid = %d
+    WHERE wc.nid = %d
+    ORDER BY parent_key', $nid, $nid);
+
+  while ($field = db_fetch_object($results)) {
+    $fields[] = $field;
+  }
+  return $fields;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function quick_donate_theme() {
+  return array(
+    'quick_donate_payment_method' => array(
+      'arguments' => array('payment_method' => NULL),
+      'template' => 'templates/quick_donate-payment-method',
+    ),
+  );
+}
+
+function quick_donate_method_links($uid, $pid) {
+  $links = l(t('Edit payment method'), "user/$uid/payment_methods/$pid/edit");
+  $links .= l(t('Remove payment method'), "user/$uid/payment_methods/$pid/remove");
+  return $links;
+}
+
+/**
+ * Implements template_preprocess_hook().
+ *
+ * Set up order-related template variables.
+ */
+function template_preprocess_quick_donate_payment_method($vars) {
+  module_load_include('module', 'uc_store');
+  module_load_include('inc', 'quick_donate', 'includes/quick_donate.user');
+  $payment_method = $vars['payment_method'];
+  $order = (array) $vars['payment_method']['order'];
+  $vars['cc_type'] = $payment_method['data']['cc_data']['cc_type'];
+  $vars['cc_number'] = '***********' . $payment_method['data']['cc_txns']['references'][$payment_method['ref_token']]['card'];
+  $vars['cc_exp_month'] = $payment_method['data']['cc_data']['cc_exp_month'];
+  $vars['cc_exp_year'] = $payment_method['data']['cc_data']['cc_exp_year'];
+  $vars['billing_first_name'] = $payment_method['billing_first_name'];
+  $vars['billing_last_name'] = $payment_method['billing_last_name'];
+  $vars['billing_street1'] = $payment_method['billing_street1'];
+  $vars['billing_street2'] = $payment_method['billing_street2'];
+  $vars['billing_city'] = $payment_method['billing_city'];
+  $vars['billing_state'] = uc_zone_get_by_id($payment_method['billing_zone']);
+  $vars['billing_country'] = uc_country_get_by_id($payment_method['billing_country']);
+  $vars['billing_postal_code'] = $payment_method['billing_postal_code'];
+  $vars['payment_method_links'] = quick_donate_method_links($payment_method['uid'], $payment_method['pid']);
+}
