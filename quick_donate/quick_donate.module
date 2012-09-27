@@ -184,39 +184,6 @@ function quick_donate_user($op, $edit, &$account) {
   }
 }
 
-/**
- * Implements hook_menu_alter().
- *
- * Swap standard node callback for custom callback we control.
- */
-function quick_donate_menu_alter(&$items) {
-  $items['node/%node']['page callback'] = 'quick_donate_node_pageview';
-}
-
-/**
- * Conditionally render "donation" subset of the larger donation form. Should only trigger for
- * users who have opted into Quick Donate.
- */
-function quick_donate_node_pageview($node) {
-
-  // TODO: replace with donation form detection.
-  if ($node->type == 'donation_form') {
-    global $user;
-    $account = $user;
-    if (!isset($account->quick_donate_registered)) {
-      $account = user_load(array('uid' => $account->uid));
-    }
-    $settings = quick_donate_settings($node->nid);
-    if ($settings['enabled'] && $account->quick_donate_registered) {
-      
-      return drupal_get_form('quick_donate_donation_form', $node->nid);
-    }
-    else {
-      return node_page_view($node);
-    }
-  }
-
-}
 
 /**
  * Implements hook_form_alter().
@@ -595,7 +562,6 @@ function quick_donate_fundraiser_order_success($order) {
 
   if ($registration && !$payment_methods && $ref_token) {
     quick_donate_save_payment_method($order->uid, $order->data['gateway'], $ref_token, $order->order_id, $webform_info['sid']);
-    drupal_set_message('TODO:fix redirect.');
   }
   
 }
@@ -786,7 +752,7 @@ function quick_donate_load_payment_methods($uid) {
 /**
  * Implements hook_fundraiser_create_webform_components().
  */
-function quick_donate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+function quick_donate_nodeapi(&$node, $op, $teaser = NULL, $a4 = NULL) {
 
   // TODO: replace this check with a call to a function that provides an array of fundraiser node types.
   $node_types = array('donation_form');
@@ -794,6 +760,22 @@ function quick_donate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   if (in_array($node->type, $node_types)) {
 
     switch ($op) {
+      case 'view':
+        // bail on teaser
+        if ($teaser) {
+          break;
+        }
+        global $user;
+        $account = $user;
+        if (!isset($account->quick_donate_registered)) {
+          $account = user_load(array('uid' => $account->uid));
+        }
+        $settings = quick_donate_settings($node->nid);
+        if (isset($settings['enabled']) && $settings['enabled'] && $account->quick_donate_registered) {
+          unset($node->content['webform']);
+          $node->content['body'] = array('#value' => drupal_get_form('quick_donate_donation_form', $node->nid));
+        }
+        break;
       case 'insert':
         quick_donate_save_settings($node->nid, $node->quick_donate_enabled, $node->quick_donate_display);
         if ($node->quick_donate_enabled) {

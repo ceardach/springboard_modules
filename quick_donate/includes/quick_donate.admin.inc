@@ -15,6 +15,12 @@ function quick_donate_admin() {
     '#title' => t('Registation settings'),
     '#collapsible' => TRUE,
   );
+  $form['registration_settings']['quick_donate_thank_you_page'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Thank you page'),
+    '#description' => t('The Drupal internal path (eg. node/42) to redirect users to when they have signed up for Quick Donate.'),
+    '#default_value' => variable_get('quick_donate_thank_you_page', FALSE),
+  );
   $form['registration_settings']['quick_donate_registration_message'] = array(
     '#type' => 'textarea',
     '#title' => t('Quick Donate registration message'),

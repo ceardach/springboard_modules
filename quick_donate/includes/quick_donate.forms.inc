@@ -66,6 +66,7 @@ function quick_donate_register($edit, $nid, $sid) {
     '#type' => 'submit',
     '#value' => t('Register now'),
   );
+  $form['#redirect'] = variable_get('quick_donate_thank_you_page', FALSE);
   $form['#validate'][] = 'quick_donate_validate_registration';
   $form['#submit'][] = 'quick_donate_submit_registration';
   return $form;
@@ -90,7 +91,7 @@ function quick_donate_submit_registration($form, $form_state) {
   $data = $form_state['values']['data'];
   quick_donate_register_user($uid, 1);
   quick_donate_save_payment_method($uid, $gateway_id, $ref_token, $order_id, $sid, $data);
-
+  return $form['#redirect'];
 }
 
 function quick_donate_payment_methods($account) {

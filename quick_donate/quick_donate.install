@@ -18,6 +18,7 @@ function quick_donate_uninstall() {
   variable_del('quick_donate_sustainer_upgrade_response');
   variable_del('quick_donate_sustainer_conversion_response');
   variable_del('quick_donate_registration_message');
+  variable_del('quick_donate_thank_you_page');
 }
 
 /**
