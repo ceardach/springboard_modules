@@ -106,6 +106,8 @@ function quick_donate_payment_methods($account) {
  * Payment method edit form.
  */
 function quick_donate_edit_payment_method($edit, $user, $method) {
+  module_load_include('inc', 'fundraiser', 'fundraiser.sustainer.forms');
+  $order = _fundraiser_get_payment_details(95);
 
   $month_options = array(
     '1' => t('January'),
@@ -125,12 +127,16 @@ function quick_donate_edit_payment_method($edit, $user, $method) {
   for ($i = 0; $i < 10; ++$i) {
     $year_options[$year + $i] = $year + $i;
   }
-  
+
   $countries = uc_country_select(uc_get_field_name('country'), 840, NULL, 'name', uc_address_field_required('country'));
   $zones = uc_zone_select(uc_get_field_name('zone'), $arg1->billing_zone, NULL, 840, 'name', uc_address_field_required('zone'));
   $form['gateway_type'] = array(
     '#type' => 'value',
     '#value' => $method['gateway_type'],
+  );
+  $form['gateway_id'] = array(
+    '#type' => 'value',
+    '#value' => $method['gateway_id'],
   );
   $form['ref_id'] = array(
     '#type' => 'value',
@@ -288,6 +294,6 @@ function quick_donate_submit_edit_payment_method($form, $form_state) {
     'card_exp_date' => $values['cc_exp_date'],
     'card_cvv' => $values['cc_cvv'],
   );
-  $ret = fundraiser_update_billing_info($values['gateway_type'], $values['ref_id'], $billing_info);
+  $ret = fundraiser_update_billing_info($values['gateway_type'], $values['ref_id'], $billing_info, $values['gateway_id']);
   drupal_set_message('gateway update function return values:' . print_r($ret, TRUE));
 }

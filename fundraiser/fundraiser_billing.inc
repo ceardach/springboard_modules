@@ -12,17 +12,17 @@
 /** 
  * Generic function that is called by the fundraiser module.
  */
-function fundraiser_update_billing_info($gateway_id, $reference_id, $billing_info) {
-  $function = $gateway_id . '_update_billing_information';
-  return $function($reference_id, $billing_info);
+function fundraiser_update_billing_info($gateway_name, $reference_id, $billing_info, $gateway_id = '') {
+  $function = $gateway_name . '_update_billing_information';
+  return $function($reference_id, $billing_info, $gateway_id);
 }
  
 /** 
  * Authorize.net billing information update function.
  */
-function authorizenet_update_billing_information($reference_id, $billing_info) {
-  if (module_exists('authorizenet_cim')) {
-    return authorizenet_cim_update($reference_id, $billing_info);
+function authorizenet_update_billing_information($reference_id, $billing_info, $gateway_id = '') {
+ if (module_exists('authorizenet_cim')) {
+    return authorizenet_cim_update($reference_id, $billing_info, $gateway_id);
   }
   else {
     drupal_set_message(t('Unable to update billing information at this time'));

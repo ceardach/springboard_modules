@@ -174,17 +174,24 @@ function fundraiser_billing_update_form_validate($form, &$form_state) {
  * Updates all pending donations with new billing information
  */
 function fundraiser_billing_update_form_submit($form, &$form_state) {
-	include_once 'fundraiser_billing.inc';
-	$orders_changed = array();
+  include_once 'fundraiser_billing.inc';
+  $orders_changed = array();
 	
-	$master_order_id = $form_state['values']['master_order_id'];
-	$payment_details = _fundraiser_get_payment_details($master_order_id);
-	$exp_month = $form_state['values']['card_exp_date']['month'];
-	$exp_year = $form_state['values']['card_exp_date']['year'];
-
-	// we can only continue if we have a gateway and reference_id
-	if ($payment_details['gateway'] && $payment_details['reference_id']) {
-    $result = fundraiser_update_billing_info($payment_details['gateway']['id'], $payment_details['reference_id'], $form_state['values']);
+  $master_order_id = $form_state['values']['master_order_id'];
+  $payment_details = _fundraiser_get_payment_details($master_order_id);
+  if (is_numeric($payment_details['gateway'])) {
+    $gateway_id = $payment_details['gateway'];
+    $gateway_name = _fundraiser_lookup_managed_gateway_name($gateway_id);
+  }
+  else {
+    $gateway_name = $payment_details['gateway']['id'];
+    $gateway_id = '';
+  }
+  $exp_month = $form_state['values']['card_exp_date']['month'];
+  $exp_year = $form_state['values']['card_exp_date']['year'];
+  // we can only continue if we have a gateway and reference_id
+  if ($payment_details['gateway'] && $payment_details['reference_id']) {
+    $result = fundraiser_update_billing_info($gateway_name, $payment_details['reference_id'], $form_state['values'], $gateway_id);
     if ($result) {
       watchdog('fundraiser', t('Billing information was updated for profile @profile', array('@profile' => $payment_details['reference_id']), NULL, WATCHDOG_INFO));
       $orders = _get_pending_recurring_orders($master_order_id); 
@@ -209,6 +216,19 @@ function fundraiser_billing_update_form_submit($form, &$form_state) {
 	}
 }
  
+
+/**
+ *
+ */
+function _fundraiser_lookup_managed_gateway_name($gateway_id) {
+  $gateways = array(
+    'gm_authorizenet' => 'authorizenet',
+    'gm_sage' => 'sage',
+  );
+
+  $gateway_type = db_result(db_query('SELECT type FROM {gateway_manager_gateways} WHERE id=%d', $gateway_id));
+  return $gateways[$gateway_type];
+}
 
 /*----------------------------------------------------------------------------------
  *
@@ -438,6 +458,7 @@ function _update_order_billing_info($order_id, &$form_state) {
  */
 function _fundraiser_get_payment_details($order_id) {
   $order = uc_order_load($order_id);
+
   $details = array();
   $gateway = '';
   
@@ -450,7 +471,6 @@ function _fundraiser_get_payment_details($order_id) {
     $donation_form_nid = $order->products[0]->nid;
     $gateway = db_result(db_query("SELECT gateway FROM {fundraiser} WHERE nid = %d", $donation_form_nid));
   }
-  
   // get the gateway's details
   $details['gateway'] = _fundraiser_lookup_gateway_details($gateway);
   
@@ -472,6 +492,10 @@ function _fundraiser_lookup_gateway_details($gateway) {
     if ($v['id'] == $gateway){
       return $v;
     }
+  }
+  // managed gateway, preserve passed value.
+  if (is_numeric($gateway)) {
+    return $gateway;
   }
   return FALSE;
 }

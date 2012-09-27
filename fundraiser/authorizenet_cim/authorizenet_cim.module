@@ -2,14 +2,14 @@
 
 /**
  * @file
- * Methods for updating authorize.net CIM profiles. 
- * 
+ * Methods for updating authorize.net CIM profiles.
+ *
  */
 
 /**
  * Main function to update a Authorize.net CIM profile with new billing information.
  */
-function authorizenet_cim_update($profile_id, $billing_info) {
+function authorizenet_cim_update($profile_id, $billing_info, $gateway_id = '') {
   // first, we need the profile so we can get the payment profile id
   $profile = authorizenet_cim_profile_get($profile_id);
   $result = NULL;
@@ -18,7 +18,7 @@ function authorizenet_cim_update($profile_id, $billing_info) {
     // get the payment profile
     $payment_profile = authorizenet_cim_payment_profile_get($profile_id, $payment_profile_id);
     if ($payment_profile) {
-      $result = authorizenet_cim_update_payment_profile($profile_id, $payment_profile->paymentProfile, $billing_info);
+      $result = authorizenet_cim_update_payment_profile($profile_id, $payment_profile->paymentProfile, $billing_info, $gateway_id);
     }
   }
   // result will be null if an error occured during the process
@@ -28,9 +28,14 @@ function authorizenet_cim_update($profile_id, $billing_info) {
 /**
  * Updates a CIM payment profile with new billing and credit card information.
  */
-function authorizenet_cim_update_payment_profile($profile_id, $payment_profile, $billing_info) {
-  $server = variable_get('uc_authnet_cim_mode', 'disabled');
-
+function authorizenet_cim_update_payment_profile($profile_id, $payment_profile, $billing_info, $gateway_id = '') {
+  $config = authorizenet_cim_server_lookup($gateway_id);
+  if (is_array($config)) {
+    $server = $config['gm_authnet_cim_mode'];
+  }
+  else {
+    $server = $config;
+  }
   // format expirdation date for API
   $expiration_date = $billing_info['card_exp_date']['year'] . '-' . sprintf("%02d", $billing_info['card_exp_date']['month']);
   
@@ -58,7 +63,16 @@ function authorizenet_cim_update_payment_profile($profile_id, $payment_profile, 
     ),
   );
   
-  $xml = _uc_authorizenet_xml_api_wrapper('updateCustomerPaymentProfileRequest',  _uc_authorizenet_array_to_xml($request));
+  $request_type = 'updateCustomerPaymentProfileRequest';
+  
+  // If config is an array we're dealing with a managed gateway. This means we can't rely on the assumptions baked into
+  // Ubercart's  api functions and need to go with the replacements in gm_authorizenet.module
+  if (is_array($config)) {
+    $xml = _gm_authorizenet_xml_api_wrapper($request_type, _uc_authorizenet_array_to_xml($request), $config);
+  }
+  else {
+    $xml = _uc_authorizenet_xml_api_wrapper($request_type,  _uc_authorizenet_array_to_xml($request));
+  }
   $response = uc_authorizenet_xml_api($server, $xml);
   $response = _authorizenet_cim_strip_namespace($response);
   $xml_raw = strstr($response, '<updateCustomerPaymentProfileResponse');
@@ -104,7 +118,7 @@ function authorizenet_cim_payment_profile_get($profile_id, $payment_profile_id) 
   return authorizenet_cim_process_xml($xml_raw);
 }
 
-/** 
+/**
  * Generic function to process the XML messages return from API.
  */
 function authorizenet_cim_process_xml($xml) {
@@ -134,4 +148,19 @@ function _authorizenet_cim_convert_state($state) {
 
 function _authorizenet_cim_convert_country($country) {
   return db_result(db_query("select country_iso_code_2 from {uc_countries} where country_id = %d", $country));
+}
+
+/**
+ * Return gateway mode for ubercart or managed gateways.
+ */
+function authorizenet_cim_server_lookup($gateway_id) {
+  if (is_numeric($gateway_id)) {
+    $config = db_result(db_query('SELECT config FROM {gateway_manager_gateways} WHERE id=%d', $gateway_id));
+    $config = unserialize($config);
+    $server = $config;
+  }
+  else {
+    $server = variable_get('uc_authnet_cim_mode', 'disabled');
+  }
+  return $server;
 }
