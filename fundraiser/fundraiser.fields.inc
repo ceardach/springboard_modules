@@ -407,7 +407,7 @@ function fundraiser_create_webform_components($nid, $donation_amounts, $show_oth
  * Creates a year expiration drop down field to be used in donation forms.
  */
 function fundraiser_create_year_field($nid, $pid) {
-  $this_year = date('Y');
+  $this_year = format_date(time(), 'Y');
   $cc_exp_year_range = variable_get('fundraiser_cc_exp_year_range', 10);
 	$years = $this_year . "\n";
 	for ($i = 1; $i <= $cc_exp_year_range; $i++) {
