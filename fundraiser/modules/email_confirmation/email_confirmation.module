@@ -72,8 +72,27 @@ function email_confirmation_form_alter(&$form, &$form_state, $form_id) {
       $form['field_confirmation_text'][0]['#default_value']['value'] = email_confirmation_default_text_template();
       $form['field_confirmation_text_message'][0]['#default_value']['value'] = email_confirmation_default_text_message();
     }
-    
-    // Add token display to fields
+
+    // Add token to subject
+    $form['subject_field'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Subject Template Settings'),
+    );
+    $form['subject_field']['field_confirmation_subject'] = $form['field_confirmation_subject'];
+    $form['subject_field']['field_confirmation_subject']['#weight'] = 0;
+    $form['subject_field']['subject_field_tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available confirmation message tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 1,
+    );
+    $form['text_field']['text_tokens']['help'] = array(
+      '#value' => theme('token_help', 'order') . theme('webform_token_help', $node),
+    );
+    unset($form['field_confirmation_subject']);
+
+    // Add token display to text message
     $text_field = $form['#field_info']['field_confirmation_text'];
     $text_message = $form['#field_info']['field_confirmation_text_message'];
     $form['text_field'] = array(
@@ -107,13 +126,11 @@ function email_confirmation_form_alter(&$form, &$form_state, $form_id) {
     unset($form['field_confirmation_text']);
     unset($form['field_confirmation_text_message']);
 
+    // Add token display to HTML message
     $form['body_field']['#type'] = 'fieldset';
     $form['body_field']['#title'] = t('HTML Template Settings');
     $form['body_field']['field_confirmation_html_message'] = $form['field_confirmation_html_message'];
     $form['body_field']['field_confirmation_html_message']['#weight'] = 10;
-    unset($form['field_confirmation_html_message']);
-
-   
     $form['body_field']['message_tokens'] = array(
       '#type' => 'fieldset',
       '#title' => t('Available confirmation message tokens'),
@@ -133,6 +150,7 @@ function email_confirmation_form_alter(&$form, &$form_state, $form_id) {
     $form['body_field']['html_tokens']['help'] = array(
       '#value' => theme('token_help', 'order') . theme('webform_token_help', $node),
     );
+    unset($form['field_confirmation_html_message']);
   }
 
   if ($form_id == 'fundraiser_confirmation_settings_form') {
@@ -253,11 +271,6 @@ function email_confirmation_form_alter(&$form, &$form_state, $form_id) {
         'effect' => 'fade',
       ),
     );
-    $form['confirmation_template']['template_wrapper']['confirmation_subject'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Subject'),
-      '#default_value' => $defaults->field_confirmation_subject_value,
-    );
     $form['confirmation_template']['template_wrapper']['confirmation_from_name'] = array(
       '#type' => 'textfield',
       '#title' => t('From Name'),
@@ -278,6 +291,24 @@ function email_confirmation_form_alter(&$form, &$form_state, $form_id) {
       '#type' => 'textfield',
       '#title' => t('BCC Email'),
       '#default_value' => $defaults->bcc,
+    );
+
+    $form['confirmation_template']['template_wrapper']['confirmation_subject'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Subject'),
+      '#default_value' => $defaults->field_confirmation_subject_value,
+      '#weight' => 8,
+    );
+    $form['confirmation_template']['template_wrapper']['confirmation_subject_tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available confirmation message tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 9,
+    );
+    // TODO: switch between order and all token types if donation form or webform, respectively.
+    $form['confirmation_template']['template_wrapper']['confirmation_subject_tokens']['help'] = array(
+      '#value' => theme('token_help', 'order') . theme('webform_token_help', $node),
     );
 
     $form['confirmation_template']['template_wrapper']['confirmation_html_email_message'] = array(
@@ -317,6 +348,7 @@ function email_confirmation_form_alter(&$form, &$form_state, $form_id) {
       '#collapsed' => TRUE,
       '#weight' => 15,
     );
+    // TODO: switch between order and all token types if donation form or webform, respectively.
     $form['confirmation_template']['template_wrapper']['confirmation_text_tokens']['help'] = array(
       '#value' => theme('token_help', 'order') . theme('webform_token_help', $node),
     );
@@ -553,8 +585,8 @@ function email_confirmation_fundraiser_order_success($order) {
       $message = array();
       $message['from_name'] = $settings->from_name;
       $message['from_address'] = $settings->reply_to_email;
-      $message['subject'] = $settings->subject;
-     
+      $message['subject'] = token_replace($settings->subject, 'order', $order);
+
       // Perform token replacements for "order" tokens and "all" tokens.
       // token replacement on the template, adds html_message to the message body via token replacement.
       $message['html_body'] = token_replace($template_html, 'order', $order);
@@ -986,7 +1018,7 @@ function email_confirmation_webform_send_mail($form, $form_state) {
     $message = array();
     $message['from_name'] = $settings->from_name;
     $message['from_address'] = $settings->reply_to_email;
-    $message['subject'] = $settings->subject;
+    $message['subject'] = token_replace($settings->subject, 'order', $node);
 
     // Perform token replacements for "order" tokens and "all" tokens.
     $message['html_body'] = token_replace($template_html, 'order', $node);
