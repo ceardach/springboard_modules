@@ -7,40 +7,140 @@
  */
 
 /**
- * Helper class to build the base structure of a sync item.
+ * A general controller that can be used when storing general sync items.
  */
-class SalesforceSyncItem {
+class SalesforceSyncItemController extends DrupalDefaultEntityController implements DrupalEntityControllerInterface {
 
   /**
-   * Constructs a SalesforceSyncItem.
+   * Constructor: sets basic variables.
    *
-   * @param string $object_type
-   *   The type of object the item is as it lives in Salesforce, such as
-   *   'Contact' or 'Opportunity'.
-   * @param string $operation
-   *   The operation to perform against the target system.  The supported
-   *   options are 'CREATE', 'UPSERT', 'UPDATE', 'DELETE' and 'UNDELETE'.
-   * @param array $sync_rules
-   *   Instructions for how the item should syncronize with its consumer.  It is
-   *   formatted as follows:
-   *   <code>
-   *     $sync_rules = array(
-   *       'FirstName' => SALESFORCE_SYNC_RULE_ALWAYS,
-   *       'Email' => SALESFORCE_SYNC_RULE_BLANK,
-   *     );
-   *   </code>
-   * @param string $dedupe_field
-   *   The field with which whose value identifies this record as a unique item,
-   *   such as 'Email' or 'Name'.
+   * @param string $entity_type
+   *   The specific type of sync item being loaded.
    */
-  public function __construct($object_type = '', $operation = NULL, $sync_rules = array(), $dedupe_field = NULL) {
-    $this->object_type = $object_type;
-    $this->dedupe_field = $dedupe_field;
-    $this->operation = $operation;
-    $this->sobject = new SalesforceObject($object_type);
-    $this->sync_rules = $sync_rules;
+  public function __construct($entity_type) {
+    $this->entityType = $entity_type;
+    $this->entityInfo = entity_get_info($entity_type);
+    $this->entityCache = array();
+    $this->hookLoadArguments = array();
+    $this->idKey = $this->entityInfo['entity keys']['id'];
+    $this->revisionKey = FALSE;
+    $this->cache = !empty($this->entityInfo['static cache']);
   }
 
+  /**
+   * Implements DrupalEntityControllerInterface::resetCache().
+   */
+  public function resetCache(array $ids = NULL) {
+    parent::resetCache($ids);
+  }
+
+  /**
+   * Implements DrupalEntityControllerInterface::load().
+   */
+  public function load($ids = array(), $conditions = array()) {
+    parent::load($ids, $conditions);
+  }
+}
+
+/**
+ * Helper class to build the base structure of a sync item.
+ */
+class SalesforceSyncItem extends Entity {
+
+
+
+  /**
+   * @name entity_class_overrides Override Entity methods
+   * @{
+   */
+
+  /**
+   * Override Entity::__construct to set up our preferences.
+   */
+  public function __construct(array $values = array(), $entity_type = NULL) {
+    $this->object_type = '';
+    $this->dedupe_field = NULL;
+    $this->operation = NULL;
+    $this->sync_rules = array();
+    parent::__construct($values, $entity_type);
+    if (!isset($this->sobject)) {
+      $this->sobject = new SalesforceObject($this->object_type);
+    }
+  }
+
+  /**
+   * Override Entity::setUp() for when there is no declared entity.
+   */
+  protected function setUp() {
+    $entity_info = entity_get_info($this->entityType);
+    if ($entity_info) {
+      parent::setUp();
+    }
+  }
+
+  /**
+   * Override Entity::save() for when there is no declared entity.
+   */
+  protected function save() {
+    if ($this->entityInfo) {
+      parent::save();
+    }
+    return FALSE;
+  }
+
+  /**
+   * Override Entity::delete() for when there is no declared entity.
+   */
+  protected function delete() {
+    if ($this->entityInfo) {
+      parent::delete();
+    }
+    return FALSE;
+  }
+
+  /**
+   * Override Entity::export() for when there is no declared entity.
+   */
+  protected function export() {
+    if ($this->entityInfo) {
+      parent::export();
+    }
+    return FALSE;
+  }
+
+  /**
+   * Override Entity::view() for when there is no declared entity.
+   */
+  protected function view() {
+    if ($this->entityInfo) {
+      parent::view();
+    }
+    return FALSE;
+  }
+
+  /**
+   * Override Entity::buildContent() for when there is no declared entity.
+   */
+  protected function buildContent() {
+    if ($this->entityInfo) {
+      parent::buildContent();
+    }
+    return FALSE;
+  }
+
+  /**
+   * Override Entity::getTranslation() for when there is no declared entity.
+   */
+  protected function getTranslation() {
+    if ($this->entityInfo) {
+      parent::getTranslation();
+    }
+    return FALSE;
+  }
+
+  /**
+   * @}
+   */
 }
 
 /**

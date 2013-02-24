@@ -87,6 +87,7 @@ function salesforce_queue_entity_info() {
     'salesforce_queue_item' => array(
       'label' => t('Salesforce queue item'),
       'entity class' => 'Entity',
+      'controller class' => 'EntityAPIController',
       'base table' => 'salesforce_queue',
       'entity keys' => array(
         'id' => 'item_id',
