@@ -111,6 +111,299 @@ function springboard_admin_menu_alter(&$items) {
   $items['admin/compact'] = array();
   $items['admin/tasks'] = array();
   $items['admin/index'] = array();
+
+  // Set up some defaults to reference repeatedly.
+  $settings_default = array(
+    'path' => 'config',
+    'title' => 'Settings',
+  );
+
+  // For the sake of consistency, the paths we will be altering will be stored
+  // here and then altered enmass at the end. This will make it easier to ensure
+  // each path is altered the same way with consistency.
+  $paths = array();
+  $paths_top = array();
+
+  // Add menu items from capwiz_connect.
+  if (module_exists('capwiz_connect')) {
+    $paths_top['config']['capwiz-connet'] = 'Capwiz Connect';
+    $paths['config']['capwiz-connect'] = array(
+      CAPWIZ_CONNECT_ADMIN_URL => array(
+        'path' => 'accounts',
+        'type' => MENU_NORMAL_ITEM,
+      ),
+      CAPWIZ_CONNECT_ADMIN_URL . '/add' => array(
+        'path' => 'add',
+        'type' => MENU_NORMAL_ITEM,
+      ),
+      CAPWIZ_CONNECT_ADMIN_URL . '/settings' => array(
+        'path' => 'config',
+        'type' => MENU_NORMAL_ITEM,
+      ),
+      CAPWIZ_CONNECT_ADMIN_URL . '/accounts/%capwiz_connect_account' => array('path' => 'accounts/%capwiz_connect_account'),
+      CAPWIZ_CONNECT_ADMIN_URL. '/accounts/%capwiz_connect_account/overview' => array('path' => 'accounts/%capwiz_connect_account/overview'),
+      CAPWIZ_CONNECT_ADMIN_URL. '/accounts/%capwiz_connect_account/edit' => array('path' => 'accounts/%capwiz_connect_account/edit'),
+      CAPWIZ_CONNECT_ADMIN_URL . '/accounts/%capwiz_connect_account/delete' => array('path' => 'accounts/%capwiz_connect_account/delete'),
+      CAPWIZ_CONNECT_ADMIN_URL . '/accounts/%capwiz_connect_account/user_mapping' => array('path' => 'accounts/%capwiz_connect_account/user_mapping'),
+      CAPWIZ_CONNECT_ADMIN_URL . '/accounts/%capwiz_connect_account/action_mapping' => array('path' => 'accounts/%capwiz_connect_account/action_mapping'),
+    );
+  }
+
+  // Add menu items from dsr.
+  if (module_exists('dsr')) {
+    $paths_top['config']['dsr'] = 'Drupal-Salesforce Reconciliation';
+    $paths_top['reports']['dsr'] = 'Drupal-Salesforce Reconciliation';
+    $paths['reports']['dsr'] = array(
+      'admin/reports/dsr' => array(
+        'path' => 'report',
+        'title' => 'Reconciliation report',
+      ),
+    );
+    $paths['config']['dsr'] = array(
+      'admin/config/system/dsr' => $settings_default,
+    );
+  }
+
+  // Add menu items from email_wrappers.
+  if (module_exists('email_wrappers')) {
+    $paths_top['config']['email-wrappers'] = 'Email Wrappers';
+    $paths['config']['email-wrappers'] = array(
+      'admin/config/system/email-wrappers' => $settings_default,
+    );
+  }
+
+  // Add menu items from fundraiser.
+  $types_added = array();
+  if (module_exists('fundraiser')) {
+    // Dynamically generate links to create fundraiser forms
+    $paths_top['donation-forms']['forms'] = 'Donation forms';
+    $types = fundraiser_get_donation_types();
+    foreach ($types as $type => $status) {
+      if (isset($status) && $status == 1) {
+        $types_added[] = $type;
+        $type = str_replace('_', '-', $type);
+        $paths['donation-forms']['forms']['node/add/' . $type] = array(
+          'path' => 'add-' . $type,
+          'title' => 'Add ' . $items['node/add/' . $type]['title'],
+        );
+      }
+    }
+
+    // View Donation forms
+    $paths['donation-forms']['forms']['admin/content/donation-forms'] = array(
+      'path' => 'view',
+      'title' => 'View forms',
+      'item_type' => 'view_item',
+      'type' => MENU_NORMAL_ITEM,
+    );
+
+    // Fundraiser settings
+    $paths_top['config']['fundraiser'] = 'Fundraiser';
+    $paths['config']['fundraiser'] = array(
+      'admin/config/system/fundraiser' => $settings_default,
+
+      // @TODO: Upsell does not show up in menu.
+      'admin/config/system/fundraiser/fundraiser_upsell' => array('path' => 'upsell'),
+      'admin/config/system/fundraiser/fundraiser_upsell/general' => array('upsell/general'),
+      'admin/config/system/fundraiser/fundraiser_upsell/thank-you' => array('upsell/thank-you'),
+
+      // @TODO: Recurring does not show up in menu.
+      'admin/config/system/fundraiser/recurring' => array('path' => 'recurring'),
+      'admin/config/system/currencies' => array('path' => 'currencies'),
+      'admin/config/system/currencies/list' => array('path' => 'currencies/list'),
+      'admin/config/system/currencies/add' => array('path' => 'currencies/add'),
+    );
+
+    // Add menu items for fundraiser_sustainers
+    if (module_exists('fundraiser_sustainers')) {
+      // Fundraiser cron
+      $items['admin/springboard/config/fundraiser/sustainer-cron'] = array(
+        'title' => 'Run fundraiser sustainer cron',
+        'description' => 'Run the Fundraiser cron.',
+        'page callback' => 'fundraiser_sustainers_standalone_cron',
+        'module' => 'fundraiser_sustainers',
+        'file path' => drupal_get_path('module', 'fundraiser_sustainers'),
+        'file' => 'fundraiser_sustainers.module',
+        'access arguments' => array('administer springboard'),
+        'type' => MENU_NORMAL_ITEM,
+        'weight' => 98,
+      );
+    }
+  }
+
+  // Add menu items from market_source.
+  if (module_exists('market_source')) {
+    $paths_top['config']['market-source'] = 'Market Source';
+    $paths['config']['market-source'] = array(
+      'admin/config/search/market-source' => $settings_default,
+    );
+  }
+
+  // Add menu items from page_wrappers.
+  if (module_exists('page_wrappers')) {
+    $paths_top['config']['page-wrappers'] = 'Page Wrappers';
+    $paths['config']['page-wrappers'] = array(
+      'admin/config/content/page-wrappers' => $settings_default,
+    );
+  }
+
+  // Add menu items from Salesforce.
+  if (module_exists('salesforce')) {
+    $paths_top['config']['salesforce'] = 'Salesforce';
+    $paths['config']['salesforce'] = array(
+      'admin/config/salesforce/authorize' => array(
+        'path' => 'authorize',
+        'title' => 'Connection settings',
+      ),
+    );
+
+    // Add menu items from salesforce_donation.
+    if (module_exists('salesforce_donation')) {
+      $paths['config']['salesforce'] = array_merge($paths['config']['salesforce'], array(
+        'admin/config/salesforce/salesforce-donation' => array(
+          'path' => 'donation',
+          'title' => 'Donation settings',
+        ),
+      ));
+    }
+
+    // Add menu items from salesforce_mapping.
+    if (module_exists('salesforce_mapping')) {
+      $paths['config']['salesforce'] = array_merge($paths['config']['salesforce'], array(
+        'admin/structure/salesforce/mappings' => array(
+          'path' => 'mappings',
+          'title' => 'Entity mapping',
+        ),
+      ));
+    }
+
+    // Add menu items from salesforce_log.
+    // @TODO: Does not show up in the menu.
+    if (module_exists('salesforce_log')) {
+      $paths_top['reports']['salesforce'] = 'Salesforce';
+      $paths['reports']['salesforce'] = array(
+        'admin/reports/salesforce/batch' => array(
+          'path' => 'batch',
+          'title' => 'Batch history report',
+          'item_type' => 'view_item',
+          'type' => MENU_NORMAL_ITEM,
+        ),
+        'admin/reports/salesforce/queue' => array(
+          'path' => 'queue',
+          'title' => 'View queue',
+          'item_type' => 'view_item',
+          'type' => MENU_NORMAL_ITEM,
+        ),
+      );
+    }
+  }
+
+  // Add menu items from secure_prepopulate.
+  if (module_exists('secure_prepopulate')) {
+    $paths_top['config']['secure-prepopulate'] = 'Secure Prepopulate';
+    $paths['config']['secure-prepopulate'] = array(
+      'admin/config/system/secure-prepopulate' => $settings_default,
+    );
+  }
+
+  // Add menu items from springboard_ga.
+  // @TODO: Springboard GA does not show up in menu.
+  if (module_exists('springboard_ga')) {
+    $paths_top['config']['google-analytics'] = 'Google Analytics';
+    $paths['config']['google-analytics'] = array(
+      'admin/config/system/springboard_ga' => $settings_default,
+    );
+  }
+
+  // Add menu items from webform.
+  if (module_exists('webform')) {
+    $paths_top['forms']['webform'] = 'Create forms';
+
+    // Dynamically generate links to create non-fundraiser forms
+    $types = webform_variable_get('webform_node_types');
+    foreach ($types as $type) {
+      if (!in_array($type, $types_added) && isset($items['node/add/' . $type])) {
+        $type = str_replace('_', '-', $type);
+        $paths['forms']['webform']['node/add/' . $type] = array(
+          'path' => 'add-' . $type,
+          'title' => 'Add ' . $items['node/add/' . $type]['title'],
+        );
+      }
+    }
+    $paths['forms']['webform'] = array(
+      'admin/content/webform' => array(
+        'path' => 'view',
+        'title' => 'View ' . $items['admin/content/webform']['title'],
+        'type' => MENU_NORMAL_ITEM,
+      ),
+    );
+
+    // Administer webform.
+    $paths_top['config']['webform'] = 'Webform';
+    $paths['config']['webform'] = array();
+
+    // Add menu items from webform_dupe_cop.
+    if (module_exists('webform_dupe_cop')) {
+      $paths['config']['webform'] = array_merge($paths['config']['webform'], array(
+        'admin/config/content/webform-dupe-cop' => array(
+          'path' => 'webform-dupe-cop',
+          'title' => 'Configure webform dupe cop',
+        ),
+      ));
+    }
+  }
+
+  // Generate subsection-level menu items based on $paths_top array.
+  foreach ($paths_top as $section => $subsections) {
+    foreach ($subsections as $subsection => $title) {
+      $path = 'admin/springboard/' . $section . '/' . $subsection;
+      $items[$path] = array(
+        'title' => $title,
+        'page callback' => 'system_admin_menu_block_page',
+        'access arguments' => array('access administration pages'),
+        'type' => MENU_NORMAL_ITEM,
+        'file' => 'system.admin.inc',
+        'file path' => drupal_get_path('module', 'system'),
+      );
+    }
+  }
+
+  // Generate individual menu items based on the config in the $paths array.
+  $views_items = array();
+  views_menu_alter($views_items);
+  foreach ($paths as $section => $subsections) {
+    foreach ($subsections as $subsection => $menu_items) {
+      foreach ($menu_items as $path => $config) {
+        // If we cannot find the path, then do not continue.  This lets us
+        // declare config for paths even if they may not exist for every
+        // installation.
+        if (!isset($items[$path]) && !isset($views_items[$path])) {
+          continue;
+        }
+
+        // Copy the original menu item to the new path location. Figure out
+        // which menu item type it is based upon the item_type value, and grab
+        // from the $items (menu items) or $views_items (views menu) arrays
+        $new_path = 'admin/springboard/' . $section . '/' . $subsection . '/' . $config['path'];
+        if (isset($config['item_type']) && $config['item_type'] == 'view_item') {
+          $items[$new_path] = $views_items[$path];
+        }
+        else {
+          $items[$new_path] = $items[$path];
+          if (!isset($config['unset']) || $config['unset']) {
+            unset($items[$path]);
+          }
+        }
+
+        // Alter the original menu item based on the config values.
+        foreach ($config as $key => $value) {
+          if ($key != 'path' && $key != 'unset' && $key != 'item_type') {
+            $items[$new_path][$key] = $value;
+          }
+        }
+      }
+    }
+  }
 }
 
 /**

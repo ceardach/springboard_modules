@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Install and update instructions.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function springboard_admin_install() {
+  db_update('system')
+    ->fields(array('weight' => 40))
+    ->condition('name', 'springboard_admin')
+    ->condition('type', 'module')
+    ->execute();
+}
