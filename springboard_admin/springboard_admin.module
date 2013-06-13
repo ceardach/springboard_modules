@@ -4,3 +4,92 @@
  * @file
  * Manages the cohesive administration section for Springboard.
  */
+
+
+/**
+ * Implements hook_menu().
+ */
+function springboard_admin_menu() {
+  $items = array();
+
+  // Primary administration pages.
+  $items['admin/springboard'] = array(
+    'title' => 'Springboard',
+    'description' => 'Administer Springboard',
+    'access arguments' => array('access springboard administer pages'),
+    'page callback' => 'springboard_admin_dashboard_page',
+    'file' => 'includes/wireframes.admin.inc',
+  );
+  $items['admin/springboard/dashboard'] = array(
+    'title' => 'Springboard',
+    'access arguments' => array('access springboard administer pages'),
+    'page callback' => 'springboard_admin_dashboard_page',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -20,
+    'file' => 'includes/wireframes.admin.inc',
+  );
+  $items['admin/springboard/donation-forms'] = array(
+    'title' => 'Donation Forms',
+    'page callback' => 'springboard_admin_block_page',
+    'page arguments' => array('donation-forms'),
+    'access arguments' => array('access springboard administer pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -16,
+    'file' => 'includes/config.admin.inc',
+  );
+  $items['admin/springboard/forms'] = array(
+    'title' => 'Forms',
+    'page callback' => 'springboard_admin_block_page',
+    'page arguments' => array('forms'),
+    'access arguments' => array('access springboard administer pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -12,
+    'file' => 'includes/config.admin.inc',
+  );
+  $items['admin/springboard/templates'] = array(
+    'title' => 'Templates',
+    'page callback' => 'springboard_admin_templates_page',
+    'access arguments' => array('access springboard administer pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -8,
+    'file' => 'includes/wireframes.admin.inc',
+  );
+  $items['admin/springboard/analytics'] = array(
+    'title' => 'Marketing & Analytics',
+    'page callback' => 'springboard_admin_analytics_page',
+    'access arguments' => array('access springboard administer pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -4,
+    'file' => 'includes/wireframes.admin.inc',
+  );
+  $items['admin/springboard/reports'] = array(
+    'title' => 'Results',
+    'page callback' => 'springboard_admin_block_page',
+    'page arguments' => array('reports'),
+    'access arguments' => array('access springboard administer pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -1,
+    'file' => 'includes/config.admin.inc',
+  );
+  $items['admin/springboard/config'] = array(
+    'title' => 'Settings',
+    'page callback' => 'springboard_admin_block_page',
+    'page arguments' => array('config'),
+    'access arguments' => array('access springboard administer pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 20,
+    'file' => 'includes/config.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_page_build().
+ */
+function springboard_admin_page_build(&$page) {
+  if (arg(0) == 'admin' && arg(1) == 'springboard') {
+    module_load_include('inc', 'springboard_admin', 'includes/wireframes.admin');
+    _springboard_admin_add_wireframes_to_page($page);
+  }
+}
