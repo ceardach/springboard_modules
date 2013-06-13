@@ -93,3 +93,39 @@ function springboard_admin_page_build(&$page) {
     _springboard_admin_add_wireframes_to_page($page);
   }
 }
+
+/**
+ * Implements hook_menu_alter().
+ *
+ * Build Springboard admin menu from existing modules' paths.
+ */
+function springboard_admin_menu_alter(&$items) {
+  // Springboard toolbar.
+  $items['admin'] = array(
+    'title' => 'Springboard',
+    'access arguments' => array('access springboard administer pages'),
+    'page callback' => 'springboard_admin_toolbar',
+    'file' => 'includes/toolbar/toolbar.inc',
+    'file path' => drupal_get_path('module', 'springboard_admin'),
+  );
+  $items['admin/compact'] = array();
+  $items['admin/tasks'] = array();
+  $items['admin/index'] = array();
+}
+
+/**
+ * Implements hook_theme().
+ */
+function springboard_admin_theme() {
+  return array(
+    'springboard_toolbar' => array(
+      'template' => 'includes/toolbar/springboard_toolbar',
+      'render element' => 'page',
+      'file' => 'includes/toolbar/toolbar.inc',
+    ),
+    'springboard_toolbar_content' => array(
+      'variables' => array(),
+      'file' => 'includes/toolbar/toolbar.inc',
+    ),
+  );
+}

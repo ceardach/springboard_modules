@@ -1,0 +1,69 @@
+/**
+ * Basic Styles for Springboard Toolbar
+ */
+
+#springboard_admin-toolbar-wrapper,
+html,
+body.toolbar {
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #fff;
+  overflow-y: hidden;
+}
+
+#springboard_admin-toolbar .minor-links {
+  float: right;
+}
+
+#springboard_admin-toolbar-wrapper table,
+#springboard_admin-toolbar-wrapper tr,
+#springboard_admin-toolbar-wrapper td {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+#springboard_admin-toolbar-wrapper ul {
+  margin: 0 0 3px 0;
+  padding-left: 0.75em;
+}
+
+#springboard_admin-toolbar-wrapper li {
+  display: inline;
+}
+
+#springboard_admin-toolbar-wrapper li a {
+  font-size: 0.75em;
+  text-decoration: none;
+  padding: 0 0.5em;
+  color: #5382a1;
+}
+
+#springboard_admin-toolbar-wrapper #springboard_admin-site-container {
+  height:100%;
+  width: 100%;
+  position: absolute;
+}
+
+iframe#springboard_admin-site {
+  border: none;
+  width: 100%;
+  margin-top: 0;
+  position: absolute;
+}
+
+#springboard_admin-toolbar-container {
+  width: 100%;
+}
+
+#springboard_admin-toolbar-wrapper #admin-menu,
+#springboard_admin-toolbar-wrapper .dev-query,
+#springboard_admin-toolbar-wrapper .devel-querylog,
+#toolbar {
+  display: none;
+}
+
+body.admin-menu {
+  margin-top: 0 !important;
+}
