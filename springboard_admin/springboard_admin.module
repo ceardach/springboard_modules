@@ -420,5 +420,11 @@ function springboard_admin_theme() {
       'variables' => array(),
       'file' => 'includes/toolbar/toolbar.inc',
     ),
+    'springboard_admin_ctools_wizard_tabs' => array(
+      'variables' => array(
+        'links' => array(),
+      ),
+      'file' => 'includes/wizard/wizard.api.inc',
+    ),
   );
 }
