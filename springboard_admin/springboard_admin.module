@@ -81,6 +81,18 @@ function springboard_admin_menu() {
     'file' => 'includes/config.admin.inc',
   );
 
+  // Form wizard.
+  $items['admin/springboard/donation-forms/wizard'] =
+  $items['admin/springboard/donation-forms/wizard/%step'] = array(
+    'title' => 'Donation form wizard',
+    'page callback' => 'springboard_admin_donation_form_wizard',
+    'page arguments' => array(4),
+    'access arguments' => array('access springboard administer pages'),
+    'file' => 'includes/donation_wizard/donation_form.wizard.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/springboard/donation-forms/wizard']['type'] = MENU_NORMAL_ITEM;
+
   return $items;
 }
 
