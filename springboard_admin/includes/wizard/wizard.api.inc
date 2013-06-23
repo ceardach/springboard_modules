@@ -64,7 +64,7 @@ function springboard_admin_ctools_form_wizard($step, $info) {
   $form_state['#form_object_id'] = $form_info['id'] . '_' . $user->uid;
   $form_state['#form_object'] = springboard_admin_get_ctools_page_cache($form_state['#form_object_id']);
 
-  // Return the form as a Ctools multi-step form.
+  // Retreive the form as a Ctools multi-step form.
   $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
 
   // Manually add the cTools trail.
@@ -127,13 +127,19 @@ function theme_springboard_admin_ctools_wizard_tabs(&$variables) {
 /**
  * Provides default behavior to occur on any form submitted within a wizard.
  */
-function springboard_admin_ctools_default_submit($form, &$form_state) {
+function springboard_admin_save_values_to_cache($form, &$form_state) {
   if (isset($form_state['input']) && is_array($form_state['input'])) {
+    ctools_include('wizard');
+    ctools_include('object-cache');
     foreach ($form_state['input'] as $key => $value) {
       $form_state['#form_object']->$key = $value;
     }
     ctools_object_cache_set('springboard_admin', $form_state['#form_object_id'], $form_state['#form_object']);
   }
+}
+
+function springboard_admin_ajax_save($form, &$form_state) {
+  springboard_admin_save_values_to_cache($form, $form_state);
 }
 
 

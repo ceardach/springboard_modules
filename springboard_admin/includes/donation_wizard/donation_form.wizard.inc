@@ -5,6 +5,7 @@
  * Implements a donation form wizard.
  */
 
+module_load_include('inc', 'springboard_admin', 'includes/wizard/wizard.api');
 
 /**
  * Generate a multistep form based on springboard_admin wizard.api
@@ -23,7 +24,6 @@ function springboard_admin_donation_form_wizard($step) {
     ),
     'file' => drupal_get_path('module', 'springboard_admin') . '/includes/donation_wizard/donation_form.wizard.inc',
   );
-  module_load_include('inc', 'springboard_admin', 'includes/wizard/wizard.api');
   return springboard_admin_ctools_form_wizard($step, $info);
 }
 
@@ -44,6 +44,9 @@ function springboard_admin_donation_form_wizard_setup($form, &$form_state) {
     '#size' => 60,
     '#maxlength' => 128,
     '#required' => FALSE,
+//    '#ajax' => array(
+//      'callback' => 'springboard_admin_ajax_save',
+//    ),
   );
   return $form;
 }
@@ -122,35 +125,36 @@ function springboard_admin_donation_form_wizard_advanced($form, &$form_state) {
  * Form for 'Set Up'
  */
 function springboard_admin_donation_form_wizard_setup_submit($form, &$form_state) {
-  springboard_admin_ctools_default_submit($form, $form_state);
+  dsm('submit');
+  springboard_admin_save_values_to_cache($form, $form_state);
 }
 
 /**
  * Form for 'Confirmations'
  */
 function springboard_admin_donation_form_wizard_confirmations_submit($form, &$form_state) {
-  springboard_admin_ctools_default_submit($form, $form_state);
+  springboard_admin_save_values_to_cache($form, $form_state);
 }
 
 /**
  * Form for 'Customize'
  */
 function springboard_admin_donation_form_wizard_customize_submit($form, &$form_state) {
-  springboard_admin_ctools_default_submit($form, $form_state);
+  springboard_admin_save_values_to_cache($form, $form_state);
 }
 
 /**
  * Form for 'Check'
  */
 function springboard_admin_donation_form_wizard_check_submit($form, &$form_state) {
-  springboard_admin_ctools_default_submit($form, $form_state);
+  springboard_admin_save_values_to_cache($form, $form_state);
 }
 
 /**
  * Form for 'Advanced'
  */
 function springboard_admin_donation_form_wizard_advanced_submit($form, &$form_state) {
-  springboard_admin_ctools_default_submit($form, $form_state);
+  springboard_admin_save_values_to_cache($form, $form_state);
 }
 
 /**

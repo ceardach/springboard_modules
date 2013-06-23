@@ -2,3 +2,4 @@ name = Springboard Administration
 description = Administration section and user interface of Springboard.
 core = 7.x
 dependencies[] = menu
+stylesheets[all][] = includes/wizard/wizard.css
