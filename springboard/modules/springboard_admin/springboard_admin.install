@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Install and update instructions.
+ */
+
+
+/**
+ * Implements hook_install().
+ */
+function springboard_admin_install() {
+  $t = get_t();
+  $menu = array(
+    'menu_name' => 'springboard-admin',
+    'title' => $t('Administer Springboard'),
+    'description' => $t('The <em>Administer Springboard</em> menu contains links for administering your Springboard installation.'),
+  );
+  menu_save($menu);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function springboard_admin_uninstall() {
+  menu_delete(array('menu_name' => 'springboard-admin'));
+}
