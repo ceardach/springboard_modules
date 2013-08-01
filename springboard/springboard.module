@@ -50,15 +50,6 @@ function springboard_menu() {
     'type' => MENU_LOCAL_TASK,
     'weight' => 7
   );
-  // Springboard Help
-  $items['admin/springboard/help'] = array(
-    'title' => 'Help',
-    'description' => 'Get help using Springboard.',
-    'page callback' => 'springboard_help_page',
-    'access arguments' => array('administer springboard'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 99,
-  );
 
   return $items;
 }
@@ -303,15 +294,6 @@ function springboard_theme($existing, $type, $theme, $path) {
       'template' => drupal_get_path('theme', $theme) . '/templates/springboard-help',
     ),
   );
-}
-
-/**
- * Menu callback. Springboard help.
- */
-function springboard_help_page() {
-  $help_array = module_invoke_all('springboard_help');
-  drupal_alter('springboard_help', $help_array);
-  return theme('springboard_help', array('help_array' => $help_array));
 }
 
 /**
