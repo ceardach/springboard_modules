@@ -51,6 +51,7 @@ function webform_goals_menu() {
     'page arguments' => array('webform_goals_admin_list'),
     'access arguments' => array('administer site configuration'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -5,
     'file' => 'webform_goals.admin.inc',
   );
   $items['admin/config/content/webform_goals/settings'] = array(
@@ -60,6 +61,7 @@ function webform_goals_menu() {
     'page arguments' => array('webform_goals_admin_settings'),
     'access arguments' => array('administer site configuration'),
     'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
     'file' => 'webform_goals.admin.inc',
   );
   $items['admin/config/content/webform_goals/add'] = array(
@@ -68,7 +70,7 @@ function webform_goals_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('webform_goals_add'),
     'access arguments' => array('administer site configuration'),
-    'type' => MENU_CALLBACK,
+    'type' => MENU_LOCAL_TASK,
     'file' => 'webform_goals.forms.inc',
   );
   $items['admin/config/content/webform_goals/%webform_goal/edit'] = array(

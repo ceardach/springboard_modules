@@ -62,10 +62,6 @@ function webform_goals_admin_list($form, $form_state = array()) {
     '#type' => 'markup',
     '#markup' => theme_table($vars),
   );
-  $form['add'] = array(
-    '#type' => 'submit',
-    '#value' => t('Add a goal'),
-  );
   $form['#submit'][] = 'webform_goals_admin_redirect';
   return $form;
 }
