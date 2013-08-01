@@ -39,15 +39,6 @@ function springboard_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
 
-  // Springboard dashboard.
-  $items['admin/springboard/dashboard'] = array(
-    'title' => 'Dashboard',
-    'description' => 'Access reports and site maintenance tasks.',
-    'access arguments' => array('access springboard dashboard'),
-    'page callback' => 'springboard_admin_dashboard',
-    'type' => MENU_LOCAL_TASK,
-    'weight' => -5,
-  );
   // Springboard forms admin.
   $items['admin/springboard/forms'] = array(
     'title' => 'Forms',
@@ -351,26 +342,6 @@ function springboard_theme($existing, $type, $theme, $path) {
 }
 
 /**
- * Menu callback. Springboard dashboard page.
- */
-function springboard_admin_dashboard() {
-  // Add our CSS for display.
-  drupal_add_css(drupal_get_path('module', 'springboard') . '/css/springboard.css', 'module');
-  $content = '<div class="springboard-dashboard dashboard">';
-  // Load the enabled panes for the dashboard.
-  $panes = module_invoke_all('springboard_dashboard_panes');
-  drupal_alter('springboard_dashboard_panes', $panes);
-  $enabled_panes = variable_get('springboard_enabled_panes', array());
-  foreach ($panes as $pane_key => $pane) {
-    if (!empty($pane['content']) && !empty($enabled_panes[$pane_key])) {
-      $content .= $pane['content'];
-    }
-  }
-  $content .= '</div>';
-  return $content;
-}
-
-/**
  * Menu callback. Springboard help.
  */
 function springboard_help_page() {
@@ -393,42 +364,6 @@ function springboard_springboard_help() {
       array('!issue_tracker' => l('drupal.org', 'http://drupal.org/project/springboard')))
   );
   return $help_array;
-}
-
-/**
- * Implements hook_springboard_dashboard_panes().
- */
-function springboard_springboard_dashboard_panes() {
-  $panes['springboard_sf_status'] = array(
-    'label' => t('Salesforce connection status'),
-    'description' => t('Salesforce connection status'),
-    'content' => _springboard_sf_status(),
-    'weight' => 0,
-  );
-  global $base_url;
-  $panes['springboard_recent_donation_forms'] = array(
-    'label' => t('Recent donation forms'),
-    'description' => t('Configuration and submissions summary for recently created or updated springboard donation forms.'),
-    'content' => '<h2>' . t('Recent donation forms ') .
-      (module_exists('webform') ? l(t('Create donation form'), $base_url.'/node/add/donation-form', array('attributes' => array('class' => 'button'))) : '' ) .
-      '</h2>' .
-      '<div class="springboard-pane" id="springboard-recent-donation-forms">' .
-      (module_exists('views') ? views_embed_view('sbv_forms', 'block_1') : t('Please enable the Views module to improve your Springboard experience.')) .
-      '</div>',
-    'weight' => 1,
-  );
-  $panes['springboard_recent_forms'] = array(
-    'label' => t('Recent forms'),
-    'description' => t('Configuration and submissions summary for recently created or updated springboard forms.'),
-    'content' => '<h2>' . t('Recent forms ') .
-      (module_exists('fundraiser') ? l(t('Create form'), $base_url.'/node/add/webform', array('attributes' => array('class' => 'button'))) : '')  .
-      '</h2>' .
-      '<div class="springboard-pane" id="springboard-recent-forms">' .
-      (module_exists('views') ? views_embed_view('sbv_forms', 'block') : t('Please enable the Views module to improve your Springboard experience.')) .
-      '</div>',
-    'weight' => 2,
-  );
-  return $panes;
 }
 
 /**
