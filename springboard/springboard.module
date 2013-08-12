@@ -27,28 +27,27 @@ function springboard_permission() {
 function springboard_menu() {
   $items = array();
 
-  // Springboard task list.
+  // Springboard settings.
   $items['admin/springboard'] = array(
     'title' => 'Springboard',
-    'description' => 'Configure and administer Springboard.',
-    'page callback' => 'system_admin_menu_block_page',
-    'module' => 'system',
-    'file path' => drupal_get_path('module', 'system'),
-    'file' => 'system.admin.inc',
-    'access arguments' => array('administer springboard'),
-    'type' => MENU_NORMAL_ITEM,
-  );
-
-  // Springboard dashboard settings.
-  $items['admin/springboard/settings/springboard'] = array(
-    'title' => 'Springboard',
     'description' => 'Configure Springboard.',
+    'access arguments' => array('administer springboard'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('springboard_admin_settings'),
+    'file' => 'springboard.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/springboard/config'] = $items['admin/springboard'];
+  $items['admin/springboard/config']['type'] = MENU_DEFAULT_LOCAL_TASK;
+
+  // Springboard-related modules.
+  $items['admin/springboard/modules'] = array(
+    'title' => 'Springboard Modules',
+    'description' => 'Quickly access and configure Springboard-related modules.',
     'access arguments' => array('administer springboard'),
+    'page callback' => 'springboard_modules_page',
     'file' => 'springboard.admin.inc',
     'type' => MENU_LOCAL_TASK,
-    'weight' => 7
   );
 
   return $items;
