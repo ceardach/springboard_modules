@@ -33,6 +33,7 @@ function salesforce_donation_menu() {
     'page arguments' => array('salesforce_donation_settings'),
     'access arguments' => array('administer salesforce'),
     'type' => MENU_NORMAL_ITEM,
+    'springboard admin type' => array('Salesforce'),
   );
   return $items;
 }

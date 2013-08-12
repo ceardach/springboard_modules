@@ -29,6 +29,7 @@ function email_wrappers_menu() {
     'page arguments' => array('email_wrappers_admin'),
     'file' => 'email_wrappers.admin.inc',
     'type' => MENU_NORMAL_ITEM,
+    'springboard admin type' => array('Email'),
   );
 
   // TODO: implement preview modal.

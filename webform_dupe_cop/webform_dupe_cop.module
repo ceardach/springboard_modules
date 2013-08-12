@@ -16,6 +16,7 @@ function webform_dupe_cop_menu() {
     'access arguments' => array('manage webform duplicate submission prevention'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'webform_dupe_cop.admin.inc',
+    'springboard admin type' => array('Forms'),
   );
   return $items;
 }

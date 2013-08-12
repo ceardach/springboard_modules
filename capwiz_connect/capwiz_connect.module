@@ -42,6 +42,7 @@ function capwiz_connect_menu() {
     'page callback' => 'capwiz_connect_account_list',
     'access arguments' => array('administer capwiz_connect'),
     'type' => MENU_NORMAL_ITEM,
+    'springboard admin type' => array('Salesforce'),
   );
 
   $items[CAPWIZ_CONNECT_ADMIN_URL . '/accounts'] = array(

@@ -31,6 +31,7 @@ function fundraiser_offline_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('fundraiser_offline_form'),
     'access arguments' => array('process offline donations'),
+    'springboard admin type' => array('Donations'),
   );
   $items['admin/fundraiser_offline/lookup'] = array(
     'title' => 'Offline fundraisers',

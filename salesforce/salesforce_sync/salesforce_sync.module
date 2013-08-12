@@ -126,6 +126,7 @@ function salesforce_sync_menu() {
     'access arguments' => array('administer salesforce sync'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/salesforce_sync.admin.inc',
+    'springboard admin type' => array('Salesforce'),
   );
   return $items;
 }

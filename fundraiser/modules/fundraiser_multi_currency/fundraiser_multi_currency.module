@@ -16,6 +16,7 @@ function fundraiser_multi_currency_menu() {
     'page callback' => 'fundraiser_multi_currency_admin',
     'file' => 'fundraiser_multi_currency.admin.inc',
     'access arguments' => array('manage currencies'),
+    'springboard admin type' => array('Donations'),
   );
   $items['admin/config/system/currencies/list'] = array(
     'type' => MENU_DEFAULT_LOCAL_TASK,

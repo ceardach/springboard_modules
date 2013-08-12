@@ -22,6 +22,7 @@ function fundraiser_upsell_menu() {
     'page arguments' => array('fundraiser_upsell_admin_settings_form'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/fundraiser_upsell.admin.inc',
+    'springboard admin type' => array('Donations'),
   );
   $items['admin/config/system/fundraiser/fundraiser_upsell/general'] = array(
     'title' => 'General settings',

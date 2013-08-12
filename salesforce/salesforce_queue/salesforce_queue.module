@@ -114,6 +114,7 @@ function salesforce_queue_menu() {
     'access arguments' => array('administer salesforce queue'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/salesforce_queue.admin.inc',
+    'springboard admin type' => array('Salesforce'),
   );
   $items['admin/config/salesforce/salesforce-queue/config'] = $items['admin/config/salesforce/salesforce-queue'];
   $items['admin/config/salesforce/salesforce-queue/config']['title'] = 'Config';

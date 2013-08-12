@@ -18,6 +18,7 @@ function salesforce_namespace_menu() {
     'access arguments' => array('administer salesforce namespace'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/salesforce_namespace.admin.inc',
+    'springboard admin type' => array('Salesforce'),
   );
 
   return $items;

@@ -33,6 +33,7 @@ function salesforce_sync_ui_menu() {
     'access arguments' => array('delete sync map records'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_NONE,
+    'springboard admin type' => array('Salesforce'),
   );
 
   $items['admin/salesforce-sync/%/%/%/sync'] = array(

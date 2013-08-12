@@ -15,6 +15,7 @@ function dsr_menu() {
     'access arguments' => array('administer dsr'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'dsr.admin.inc',
+    'springboard admin type' => array('Salesforce'),
   );
 
   $items['admin/reports/dsr'] = array(

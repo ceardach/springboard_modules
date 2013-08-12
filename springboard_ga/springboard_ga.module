@@ -18,6 +18,7 @@ function springboard_ga_menu() {
     'page arguments' => array('springboard_ga_settings_form'),
     'access arguments' => array('administer springboard'),
     'type' => MENU_NORMAL_ITEM,
+    'springboard admin type' => array('Analytics'),
   );
   return $items;
 }

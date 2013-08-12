@@ -76,6 +76,7 @@ function fundraiser_sustainers_menu() {
     'access arguments' => array('administrate recurring donations'),
     'file' => 'fundraiser_sustainers.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'springboard admin type' => array('Donations'),
   );
   $items['admin/config/system/fundraiser/recurring/%'] = array(
     'title' => 'View donation',

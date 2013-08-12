@@ -36,6 +36,7 @@ function springboard_menu() {
     'page arguments' => array('springboard_admin_settings'),
     'file' => 'springboard.admin.inc',
     'type' => MENU_NORMAL_ITEM,
+    'springboard admin type' => array('Springboard'),
   );
   $items['admin/springboard/config'] = $items['admin/springboard'];
   $items['admin/springboard/config']['type'] = MENU_DEFAULT_LOCAL_TASK;

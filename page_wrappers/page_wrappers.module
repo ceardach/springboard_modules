@@ -22,6 +22,7 @@ function page_wrappers_menu() {
     'page arguments' => array('page_wrappers_settings_form'),
     'access arguments' => array('administer page wrappers'),
     'file' => 'page_wrappers.admin.inc',
+    'springboard admin type' => array('Forms'),
   );
 
   return $items;

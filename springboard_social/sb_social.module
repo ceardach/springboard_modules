@@ -42,6 +42,7 @@ function sb_social_menu() {
     'access arguments' => array('administer springboard social'),
     'file' => 'includes/sb_social.admin.inc',
     'type' => MENU_NORMAL_ITEM,
+    'springboard admin type' => array('Analytics'),
   );
   $items['node/%node/share_settings'] = array(
     'title' => t('Social'),

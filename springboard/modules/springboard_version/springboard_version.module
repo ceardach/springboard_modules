@@ -28,6 +28,7 @@ function springboard_version_menu() {
     'description' => 'Access Springboard version report.',
     'access arguments' => array('access springboard version'),
     'page callback' => 'springboard_version_report',
+    'springboard admin type' => array('Springboard'),
   );
   return $items;
 }

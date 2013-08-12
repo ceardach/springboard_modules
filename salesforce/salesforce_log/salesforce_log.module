@@ -55,6 +55,7 @@ function salesforce_log_menu() {
     'access arguments' => array('view salesforce batch logs'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/salesforce_log.admin.inc',
+    'springboard admin type' => array('Salesforce'),
   );
 
   return $items;

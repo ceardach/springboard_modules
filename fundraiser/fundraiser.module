@@ -61,6 +61,7 @@ function fundraiser_menu() {
     'access arguments' => array('administer fundraiser'),
     'type' => MENU_NORMAL_ITEM,
     'file' => 'fundraiser.admin.inc',
+    'springboard admin type' => array('Donations'),
   );
   $items['admin/config/system/fundraiser/settings'] = array(
     'title' => 'Fundraiser',

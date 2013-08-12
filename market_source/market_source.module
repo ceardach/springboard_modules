@@ -21,6 +21,7 @@ function market_source_menu() {
     'page arguments' => array('market_source_admin_settings_form'),
     'access arguments' => array('administer site configuration'),
     'file' => 'market_source.admin.inc',
+    'springboard admin type' => array('Analytics'),
   );
   return $items;
 }
