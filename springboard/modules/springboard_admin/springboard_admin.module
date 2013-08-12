@@ -46,7 +46,7 @@ function springboard_admin_menu() {
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('donation-forms'),
     'weight' => -16,
-    'file' => 'includes/admin.inc',
+    'file' => 'springboard_admin.admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/forms'] = array(
@@ -55,7 +55,7 @@ function springboard_admin_menu() {
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('forms'),
     'weight' => -12,
-    'file' => 'includes/admin.inc',
+    'file' => 'springboard_admin.admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/templates'] = array(
@@ -80,7 +80,7 @@ function springboard_admin_menu() {
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('reports'),
     'weight' => -1,
-    'file' => 'includes/admin.inc',
+    'file' => 'springboard_admin.admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/config'] = array(
@@ -89,7 +89,7 @@ function springboard_admin_menu() {
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('config'),
     'weight' => 20,
-    'file' => 'includes/admin.inc',
+    'file' => 'springboard_admin.admin.inc',
     'menu_name' => 'springboard-admin',
   );
 
