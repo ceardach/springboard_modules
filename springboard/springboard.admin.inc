@@ -2058,3 +2058,65 @@ function springboard_admin_ignore($form, $form_state) {
   drupal_set_message(t('Please see the !help page for additional help configuring Springboard.',
     array('!help' => l(t('Help'), 'admin/springboard/help'))));
 }
+
+/**
+ * Page callback for an index of Springboard-related modules.
+ */
+function springboard_modules_page() {
+  $paths = array(
+    'springboard',
+    'salesforce',
+  );
+
+  module_load_include('admin.inc', 'system');
+  $modules = system_rebuild_module_data();
+  foreach ($modules as $module_name => $data) {
+    // Remove hidden modules.
+    if (!empty($data->info['hidden'])) {
+      unset($modules[$module_name]);
+    }
+
+    // Remove modules not in one of the given paths.
+    else {
+      $found = FALSE;
+      foreach ($paths as $path) {
+        if (strpos($data->uri, $path) !== FALSE) {
+          $found = TRUE;
+        }
+      }
+      if (!$found) {
+        unset($modules[$module_name]);
+      }
+    }
+  }
+  uasort($modules, 'system_sort_modules_by_info_name');
+
+  $menu_items = array();
+  foreach ($modules as $module => $data) {
+    $links = array();
+    $links['admin/modules'] = array (
+      'title' => 'Status: ' . (module_exists($module) ? 'Enabled' : 'Disabled'),
+      'href' => 'admin/modules',
+      'localized_options' => array(),
+    );
+
+    $admin_tasks = system_get_module_admin_tasks($module, $data->info);
+    if (!empty($admin_tasks)) {
+      // Sort links by title.
+      uasort($admin_tasks, 'drupal_sort_title');
+
+      // Move 'Configure permissions' links to the bottom of each section.
+      $permission_key = "admin/people/permissions#module-$module";
+      if (isset($admin_tasks[$permission_key])) {
+        $permission_task = $admin_tasks[$permission_key];
+        unset($admin_tasks[$permission_key]);
+        $admin_tasks[$permission_key] = $permission_task;
+      }
+
+      $links = array_merge($links, $admin_tasks);
+    }
+
+    $menu_items[$data->info['name']] = array($data->info['description'], $links);
+  }
+  return theme('system_admin_index', array('menu_items' => $menu_items));
+}

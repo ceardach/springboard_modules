@@ -25,9 +25,10 @@ function springboard_admin_menu() {
   // List all springboard config pages.
   $items['springboard'] = array(
     'title' => 'Administer Springboard',
-    'page callback' => 'springboard_admin_index_page',
     'access arguments' => array('administer springboard'),
-    'file' => 'includes/admin.inc',
+    'page callback' => 'springboard_modules_page',
+    'file path' => drupal_get_path('module', 'springboard'),
+    'file' => 'springboard.admin.inc',
   );
 
   // Primary administration pages.
@@ -41,52 +42,52 @@ function springboard_admin_menu() {
   );
   $items['springboard/donation-forms'] = array(
     'title' => 'Donation Forms',
+    'access arguments' => array('administer springboard'),
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('donation-forms'),
-    'access arguments' => array('administer springboard'),
     'weight' => -16,
     'file' => 'includes/admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/forms'] = array(
     'title' => 'Forms',
+    'access arguments' => array('administer springboard'),
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('forms'),
-    'access arguments' => array('administer springboard'),
     'weight' => -12,
     'file' => 'includes/admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/templates'] = array(
     'title' => 'Templates',
-    'page callback' => 'springboard_admin_templates_page',
     'access arguments' => array('administer springboard'),
+    'page callback' => 'springboard_admin_templates_page',
     'weight' => -8,
     'file' => 'includes/wireframes.admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/analytics'] = array(
     'title' => 'Marketing & Analytics',
-    'page callback' => 'springboard_admin_analytics_page',
     'access arguments' => array('administer springboard'),
+    'page callback' => 'springboard_admin_analytics_page',
     'weight' => -4,
     'file' => 'includes/wireframes.admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/reports'] = array(
     'title' => 'Results',
+    'access arguments' => array('administer springboard'),
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('reports'),
-    'access arguments' => array('administer springboard'),
     'weight' => -1,
     'file' => 'includes/admin.inc',
     'menu_name' => 'springboard-admin',
   );
   $items['springboard/config'] = array(
     'title' => 'Settings',
+    'access arguments' => array('administer springboard'),
     'page callback' => 'springboard_admin_block_page',
     'page arguments' => array('config'),
-    'access arguments' => array('administer springboard'),
     'weight' => 20,
     'file' => 'includes/admin.inc',
     'menu_name' => 'springboard-admin',
