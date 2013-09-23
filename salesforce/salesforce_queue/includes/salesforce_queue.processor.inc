@@ -640,6 +640,7 @@ class SalesforceQueueProcessor {
     if ($this->endStatus == SALESFORCE_QUEUE_PROCESS_FAIL_LEASE_EXPIRED || ($this->leaseExpire < time() && $current_lease_key == $this->leaseKey)) {
       // Lease expired, fail.
       $this->endStatus = SALESFORCE_QUEUE_PROCESS_FAIL_LEASE_EXPIRED;
+      watchdog('salesforce_queue', 'Processing batches incomplete due to expired lease.');
       $this->salesforceSync->failBatch($batch, SALESFORCE_QUEUE_PROCESS_ITEM_FAIL_LEASE_EXPIRED);
     }
     else {
