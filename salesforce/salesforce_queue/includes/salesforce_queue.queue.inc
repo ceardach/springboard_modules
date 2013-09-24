@@ -370,7 +370,7 @@ class SalesforceQueue implements DrupalReliableQueueInterface {
     $lease_var = 'salesforce_queue_' . $this->queueName . '_lease';
     $key_var = $lease_var . '_key';
     $current_key = variable_get($key_var, NULL);
-    if ($key == $current_key || is_null($current_key) || $force) {
+    if ($key == $current_key || $force) {
       lock_release($lease_var);
       return TRUE;
     }
